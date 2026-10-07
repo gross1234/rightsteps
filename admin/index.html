@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>RightSteps HQ</title>
+<link rel="icon" href="../favicon.png">
+<style>
+:root{color-scheme:dark;--bg:#070A1C;--bg2:#0d1230;--card:rgba(255,255,255,.055);--line:rgba(255,255,255,.11);--text:#fff;--dim:#b3b8d6;--mute:#7d83a8;--gold:#FFC65C;--pink:#FF4FD8;--cyan:#4FD8FF;--green:#4FFFA1;--red:#FF6B6B;--r:16px}
+*{box-sizing:border-box}html,body{margin:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Rounded","Segoe UI",Roboto,sans-serif;background:linear-gradient(#141A3A,var(--bg) 420px) var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+a{color:var(--gold)}button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:1100px;margin:0 auto;padding:16px 16px 80px}
+header{display:flex;align-items:center;gap:12px;padding:8px 0 16px}
+.logo{font-weight:900;font-size:22px;letter-spacing:-.5px;background:linear-gradient(90deg,#FFE066,#FF8A3D,#FF4FD8);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sp{flex:1}.dim{color:var(--dim)}.mute{color:var(--mute)}.small{font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.grid{display:grid;gap:12px}.k4{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+.kpi .v{font-size:26px;font-weight:800;letter-spacing:-.5px;margin-top:4px}.kpi .l{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+.kpi .s{font-size:12px;color:var(--mute);margin-top:2px}
+h2{font-size:18px;margin:26px 0 10px}h3{font-size:15px;margin:0 0 8px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer;background:rgba(255,255,255,.1);min-height:42px;text-decoration:none;color:var(--text)}
+.btn.pri{background:linear-gradient(90deg,#FFB13D,#FF4FD8);color:#14081f}.btn.sm{padding:6px 10px;min-height:34px;font-size:13px;border-radius:10px}
+.btn:disabled{opacity:.5;cursor:default}
+input,select,textarea{width:100%;background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:12px;padding:12px;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--gold)}
+label{display:block;font-size:13px;color:var(--dim);margin:12px 0 6px}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:6px;scrollbar-width:none}
+.tabs button{flex:none;border:1px solid var(--line);background:transparent;border-radius:999px;padding:8px 14px;cursor:pointer;color:var(--dim);font-weight:700}
+.tabs button.on{background:#fff;color:#0b0f26;border-color:#fff}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}.seg button{border:0;background:transparent;padding:6px 10px;color:var(--dim);cursor:pointer;font-weight:700}.seg button.on{background:rgba(255,255,255,.14);color:#fff}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left}th{color:var(--dim);font-weight:600;font-size:12px}
+.tblwrap{overflow-x:auto}
+.pill{display:inline-block;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:800}
+.p-ready{background:rgba(255,198,92,.16);color:var(--gold)}.p-recorded{background:rgba(79,216,255,.16);color:var(--cyan)}.p-final{background:rgba(79,255,161,.16);color:var(--green)}.p-skipped{background:rgba(255,255,255,.1);color:var(--mute)}
+.ads{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.ad video,.ad img{width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:12px;background:#000;display:block}
+.ad .row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.vo{font-size:14px;line-height:1.45;color:var(--dim);margin:8px 0}
+.chart{width:100%;height:180px;display:block}
+.center{min-height:80vh;display:grid;place-items:center}
+.auth{width:100%;max-width:380px}
+.err{color:var(--red);font-size:14px;margin-top:10px;min-height:1em}
+.ok{color:var(--green)}
+.qr{background:#fff;border-radius:12px;padding:10px;width:200px;height:200px;margin:10px auto;display:block}
+.code{font-family:ui-monospace,Menlo,monospace;letter-spacing:.2em;text-align:center;font-size:22px}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:12px;word-break:break-all}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#fff;color:#0b0f26;font-weight:700;padding:10px 16px;border-radius:12px;opacity:0;transition:.2s;pointer-events:none;z-index:9}
+.toast.on{opacity:1}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--dim);margin-top:6px}.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.two{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.hide{display:none!important}
+details summary{cursor:pointer;color:var(--dim)}
+@media (max-width:520px){.kpi .v{font-size:22px}th,td{padding:7px 4px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><span class="logo">RightSteps HQ</span><span class="sp"></span><span id="who" class="small mute"></span><button id="signout" class="btn sm hide">Sign out</button></header>
+  <div id="view"></div>
+</div>
+<div id="toast" class="toast"></div>
+<script src="../shared/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const C = window.RS_CONFIG;
+const sb = supabase.createClient(C.url, C.key, { auth: { persistSession: true, detectSessionInUrl: true, flowType: 'implicit' } });
+const $ = (s, el = document) => el.querySelector(s);
+const view = $('#view');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money = (v, d = 2) => v == null ? '—' : '$' + Number(v).toLocaleString(undefined, {minimumFractionDigits: d, maximumFractionDigits: d});
+const num = v => v == null ? '—' : Number(v).toLocaleString();
+const pct = v => v == null ? '—' : (Number(v) * 100).toFixed(1) + '%';
+function toast(t){ const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove('on'), 2200); }
+async function copy(t){ try { await navigator.clipboard.writeText(t); toast('Copied'); } catch { prompt('Copy this:', t); } }
+function h(html){ const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content; }
+
+// ---------------- auth: password + required TOTP ----------------
+let recovery = location.hash.includes('type=recovery');
+sb.auth.onAuthStateChange((ev) => { if (ev === 'PASSWORD_RECOVERY') { recovery = true; route(); } });
+
+async function route(){
+  const { data: { session } } = await sb.auth.getSession();
+  $('#signout').classList.toggle('hide', !session);
+  $('#who').textContent = session?.user?.email ?? '';
+  if (recovery && session) return screenNewPassword();
+  if (!session) return screenSignIn();
+  const { data: aal } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (aal.currentLevel === 'aal2') return app();
+  const { data: f } = await sb.auth.mfa.listFactors();
+  const verified = (f?.totp ?? []).filter(x => x.status === 'verified');
+  if (verified.length) return screenChallenge(verified[0]);
+  return screenEnroll();
+}
+$('#signout').onclick = async () => { await sb.auth.signOut(); location.hash = ''; route(); };
+
+function authShell(title, body){
+  view.replaceChildren(h(`<div class="center"><div class="card auth"><h2 style="margin-top:0">${title}</h2>${body}<div class="err" id="err"></div></div></div>`));
+}
+function screenSignIn(mode = 'in'){
+  const up = mode === 'up';
+  authShell(up ? 'Create the owner account' : 'Sign in', `
+    <p class="small dim">${up ? 'Only the owner\'s email is allowed. You\'ll confirm your email, then set up an authenticator app (two-factor is required).' : 'Password, then a 6-digit code from your authenticator app.'}</p>
+    <form id="f"><label>Email</label><input id="em" type="email" autocomplete="username" required>
+    <label>Password ${up ? '<span class="mute">(12+ characters)</span>' : ''}</label><input id="pw" type="password" autocomplete="${up ? 'new-password' : 'current-password'}" minlength="${up ? 12 : 1}" required>
+    <div style="height:14px"></div><button class="btn pri" style="width:100%">${up ? 'Create account' : 'Continue'}</button></form>
+    <p class="small" style="margin-top:14px">${up ? '<a href="#" id="sw">I already have an account</a>' : '<a href="#" id="sw">First time? Create the owner account</a> · <a href="#" id="fg">Forgot password</a>'}</p>`);
+  $('#sw').onclick = e => { e.preventDefault(); screenSignIn(up ? 'in' : 'up'); };
+  $('#fg')?.addEventListener('click', async e => {
+    e.preventDefault(); const em = $('#em').value.trim(); if (!em) return $('#err').textContent = 'Enter your email first.';
+    const { error } = await sb.auth.resetPasswordForEmail(em, { redirectTo: C.adminUrl });
+    $('#err').innerHTML = error ? esc(error.message) : '<span class="ok">Check your email for a reset link.</span>';
+  });
+  $('#f').onsubmit = async e => {
+    e.preventDefault(); $('#err').textContent = '';
+    const email = $('#em').value.trim(), password = $('#pw').value;
+    if (up) {
+      const { error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: C.adminUrl } });
+      $('#err').innerHTML = error ? esc(error.message) : '<span class="ok">Check your inbox and tap the confirmation link. It brings you back here to set up two-factor.</span>';
+    } else {
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) return $('#err').textContent = error.message;
+      route();
+    }
+  };
+}
+async function screenEnroll(){
+  const { data: f0 } = await sb.auth.mfa.listFactors();
+  for (const x of (f0?.all ?? []).filter(x => x.status === 'unverified')) await sb.auth.mfa.unenroll({ factorId: x.id });
+  const { data, error } = await sb.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'Authenticator ' + new Date().toISOString().slice(0,10) });
+  if (error) return authShell('Two-factor setup', `<p class="err">${esc(error.message)}</p>`);
+  authShell('Turn on two-factor', `
+    <p class="small dim">Scan with Google Authenticator, 1Password, Authy or iPhone Passwords, then enter the 6-digit code.</p>
+    <img class="qr" alt="QR code" src="${data.totp.qr_code}">
+    <details><summary class="small">Can't scan? Enter this key</summary><p class="mono">${esc(data.totp.secret)}</p></details>
+    <form id="f"><label>6-digit code</label><input id="c" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required>
+    <div style="height:14px"></div><button class="btn pri" style="width:100%">Verify & finish</button></form>`);
+  $('#c').focus();
+  $('#f').onsubmit = async e => {
+    e.preventDefault();
+    const { error } = await sb.auth.mfa.challengeAndVerify({ factorId: data.id, code: $('#c').value.trim() });
+    if (error) return $('#err').textContent = error.message;
+    toast('Two-factor is on'); route();
+  };
+}
+function screenChallenge(factor){
+  authShell('Two-factor code', `<p class="small dim">Open your authenticator app and enter the code for RightSteps.</p>
+    <form id="f"><input id="c" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required>
+    <div style="height:14px"></div><button class="btn pri" style="width:100%">Verify</button></form>`);
+  $('#c').focus();
+  $('#f').onsubmit = async e => {
+    e.preventDefault();
+    const { error } = await sb.auth.mfa.challengeAndVerify({ factorId: factor.id, code: $('#c').value.trim() });
+    if (error) return $('#err').textContent = error.message;
+    route();
+  };
+}
+function screenNewPassword(){
+  authShell('Choose a new password', `<form id="f"><label>New password (12+ characters)</label><input id="pw" type="password" minlength="12" autocomplete="new-password" required>
+    <div style="height:14px"></div><button class="btn pri" style="width:100%">Save</button></form>`);
+  $('#f').onsubmit = async e => {
+    e.preventDefault();
+    const { error } = await sb.auth.updateUser({ password: $('#pw').value });
+    if (error) return $('#err').textContent = error.message;
+    recovery = false; history.replaceState(null, '', location.pathname); toast('Password updated'); route();
+  };
+}
+
+// ---------------- app ----------------
+const TABS = [['overview','Overview'],['revenue','Revenue'],['ads','Ads'],['reader','Reader'],['settings','Settings']];
+let tab = (location.hash.match(/tab=(\w+)/) || [])[1] || 'overview';
+let days = 30;
+function app(){
+  view.replaceChildren(h(`<div class="tabs" id="tabs">${TABS.map(([k,l]) => `<button data-k="${k}" class="${k===tab?'on':''}">${l}</button>`).join('')}</div><div id="pane"></div>`));
+  $('#tabs').onclick = e => { const k = e.target.dataset?.k; if (!k) return; tab = k; history.replaceState(null,'','#tab='+k); app(); };
+  ({ overview, revenue, ads, reader, settings })[tab]();
+}
+const pane = () => $('#pane');
+async function rpcOrShow(fn, args){
+  const { data, error } = await sb.rpc(fn, args);
+  if (error) { pane().replaceChildren(h(`<div class="card err">${esc(error.message)}</div>`)); throw error; }
+  return data;
+}
+
+// ---- charts (inline SVG, no libraries) ----
+function lineChart(series, keys, colors, fmt = num){
+  const W = 640, H = 180, P = 26, n = series.length;
+  const max = Math.max(1, ...series.flatMap(d => keys.map(k => Number(d[k] || 0))));
+  const x = i => P + (n <= 1 ? 0 : i * (W - P * 2) / (n - 1)), y = v => H - P - (v / max) * (H - P * 2);
+  const paths = keys.map((k, j) => `<path d="${series.map((d,i) => (i?'L':'M') + x(i).toFixed(1) + ' ' + y(Number(d[k]||0)).toFixed(1)).join(' ')}" fill="none" stroke="${colors[j]}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`).join('');
+  const lbl = series.length ? `<text x="${P}" y="${H-6}" fill="#7d83a8" font-size="11">${esc(series[0].day.slice(5))}</text><text x="${W-P}" y="${H-6}" fill="#7d83a8" font-size="11" text-anchor="end">${esc(series[n-1].day.slice(5))}</text>` : '';
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"><line x1="${P}" x2="${W-P}" y1="${H-P}" y2="${H-P}" stroke="rgba(255,255,255,.12)"/><text x="${P}" y="14" fill="#7d83a8" font-size="11">${esc(fmt(max))}</text>${paths}${lbl}</svg>`;
+}
+function barChart(series, keys, colors, fmt){
+  const W = 640, H = 180, P = 26, n = Math.max(series.length, 1);
+  const tot = d => keys.reduce((s,k) => s + Number(d[k] || 0), 0);
+  const max = Math.max(0.01, ...series.map(tot));
+  const bw = (W - P * 2) / n;
+  let bars = '';
+  series.forEach((d, i) => { let acc = 0; keys.forEach((k, j) => { const v = Number(d[k] || 0); if (!v) return;
+    const hh = v / max * (H - P * 2), yy = H - P - (acc + v) / max * (H - P * 2); acc += v;
+    bars += `<rect x="${(P + i * bw + bw * .15).toFixed(1)}" y="${yy.toFixed(1)}" width="${(bw * .7).toFixed(1)}" height="${hh.toFixed(1)}" rx="2" fill="${colors[j]}"><title>${esc(d.day)}: ${esc(fmt(v))}</title></rect>`; }); });
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"><line x1="${P}" x2="${W-P}" y1="${H-P}" y2="${H-P}" stroke="rgba(255,255,255,.12)"/><text x="${P}" y="14" fill="#7d83a8" font-size="11">${esc(fmt(max))}</text>${bars}</svg>`;
+}
+const legend = (names, colors) => `<div class="legend">${names.map((n,i) => `<span><i style="background:${colors[i]}"></i>${esc(n)}</span>`).join('')}</div>`;
+
+async function overview(){
+  pane().replaceChildren(h(`<p class="dim">Loading…</p>`));
+  const d = await rpcOrShow('dashboard_summary', { p_days: days, p_tz: C.tz });
+  const t = d.totals, s = d.series;
+  const revTotal = (Number(t.app_store || 0) + Number(t.admob ?? t.ad_rev_est ?? 0));
+  const last = t.last_event_at ? new Date(t.last_event_at) : null;
+  pane().replaceChildren(h(`
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 12px">
+      <div class="seg" id="rng">${[7,30,90].map(n => `<button data-n="${n}" class="${n===days?'on':''}">${n}d</button>`).join('')}</div>
+      <span class="small mute">${last ? 'Last event ' + last.toLocaleString() : 'No events yet — they start when a build with analytics is in players\' hands.'}</span>
+    </div>
+    <div class="grid k4">
+      ${kpi('Revenue', money(revTotal), 'App Store + ads')}
+      ${kpi('Ad revenue', money(t.admob ?? t.ad_rev_est), t.admob != null ? 'AdMob reported' : 'in-app estimate')}
+      ${kpi('App Store', money(t.app_store), 'proceeds after Apple')}
+      ${kpi('Active players', num(t.users), days + '-day unique')}
+      ${kpi('New installs', num(t.installs), 'first opens')}
+      ${kpi('Sessions', num(t.sessions), t.avg_session_min != null ? t.avg_session_min + ' min avg' : '')}
+      ${kpi('D1 retention', pct(t.d1_retention), 'came back next day')}
+      ${kpi('D7 retention', pct(t.d7_retention), 'came back on day 7')}
+      ${kpi('Levels won', num(t.levels), '')}
+      ${kpi('Daily puzzles', num(t.daily_plays), '')}
+      ${kpi('Trials · buys', num(t.trials) + ' · ' + num(t.purchases), num(t.paywall_views) + ' paywall views')}
+      ${kpi('Ad impressions', num(t.ad_impressions), '')}
+    </div>
+    <div class="two" style="margin-top:12px">
+      <div class="card"><h3>Revenue per day</h3>${barChart(s.map(x => ({...x, ads: x.admob ?? x.ad_rev_est})), ['app_store','ads'], ['#FFC65C','#FF4FD8'], v => money(v))}${legend(['App Store','Ads'],['#FFC65C','#FF4FD8'])}</div>
+      <div class="card"><h3>Players per day</h3>${lineChart(s, ['dau','installs'], ['#4FD8FF','#4FFFA1'])}${legend(['Active','New'],['#4FD8FF','#4FFFA1'])}</div>
+    </div>
+    <div class="two" style="margin-top:12px">
+      <div class="card"><h3>Furthest level reached</h3>${d.level_reach.length ? barChart(d.level_reach.map(x => ({day: 'Lv ' + x.level, players: x.players})), ['players'], ['#4FD8FF'], num) : '<p class="small mute">No level data yet.</p>'}<p class="small mute">Where players stop climbing. A cliff = a level to rebalance.</p></div>
+      <div class="card"><h3>Top events</h3><div class="tblwrap"><table><tr><th>Event</th><th>Count</th></tr>${d.top_events.map(e => `<tr><td>${esc(e.name)}</td><td>${num(e.count)}</td></tr>`).join('') || '<tr><td class="mute">none yet</td><td></td></tr>'}</table></div></div>
+    </div>`));
+  $('#rng').onclick = e => { const n = +e.target.dataset?.n; if (n) { days = n; overview(); } };
+}
+const kpi = (l, v, s) => `<div class="card kpi"><div class="l">${esc(l)}</div><div class="v">${esc(v)}</div><div class="s">${esc(s)}</div></div>`;
+
+async function revenue(){
+  pane().replaceChildren(h(`<p class="dim">Loading…</p>`));
+  const d = await rpcOrShow('dashboard_summary', { p_days: 60, p_tz: C.tz });
+  const { data: st } = await sb.from('settings').select('key,value');
+  const S = Object.fromEntries((st || []).map(r => [r.key, r.value]));
+  const rows = [...d.series].reverse();
+  const asc = S.asc || {}, adm = S.admob || {};
+  pane().replaceChildren(h(`
+    <div class="two">
+      <div class="card"><h3>App Store (subscriptions + purchases)</h3>
+        <p class="small dim">Pulled nightly from App Store Connect sales reports. Amounts are your proceeds after Apple's cut, in USD.</p>
+        <label>Vendor number</label><input id="vn" value="${esc(asc.vendor_number || '')}" placeholder="8 digits, e.g. 8xxxxxxx">
+        <p class="small mute">Find it at <a href="https://appstoreconnect.apple.com/itc/payments_and_financial_reports" target="_blank" rel="noopener">App Store Connect → Payments and Financial Reports</a> (top-left, under your name).</p>
+        <div class="row" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" id="vnSave">Save</button><button class="btn sm" id="ascSync">Sync now</button></div>
+        <div class="err" id="ascMsg"></div></div>
+      <div class="card"><h3>AdMob (reported earnings)</h3>
+        <p class="small dim">In-app estimates arrive automatically. For AdMob's official numbers, connect your AdMob account once (read-only).</p>
+        ${adm.refresh_token ? `<p class="ok small">Connected${adm.publisher ? ' · ' + esc(adm.publisher) : ''}</p>` : `
+        <details ${adm.client_id ? '' : 'open'}><summary class="small">One-time setup (5 min)</summary><ol class="small dim">
+          <li>Enable the AdMob API: <a target="_blank" rel="noopener" href="https://console.cloud.google.com/apis/library/admob.googleapis.com">console.cloud.google.com → AdMob API → Enable</a></li>
+          <li>Create credentials: <a target="_blank" rel="noopener" href="https://console.cloud.google.com/apis/credentials/oauthclient">Credentials → Create OAuth client ID</a> → Web application → Authorized redirect URI <span class="mono">${esc(C.adminUrl)}</span></li>
+          <li>Paste the client ID and secret below, Save, then Connect.</li></ol></details>
+        <label>OAuth client ID</label><input id="cid" value="${esc(adm.client_id || '')}">
+        <label>OAuth client secret</label><input id="csec" type="password" value="${adm.client_secret ? '••••••••' : ''}">`}
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">${adm.refresh_token ? '<button class="btn sm" id="admSync">Sync now</button>' : '<button class="btn sm" id="admSave">Save</button><button class="btn sm pri" id="admConnect">Connect AdMob</button>'}</div>
+        <div class="err" id="admMsg"></div></div>
+    </div>
+    <h2>Daily revenue</h2>
+    <div class="card tblwrap"><table><tr><th>Day</th><th>App Store</th><th>AdMob</th><th>Ads (est.)</th><th>Trials</th><th>Buys</th><th>Total</th></tr>
+    ${rows.map(r => { const ads = r.admob ?? r.ad_rev_est; return `<tr><td>${esc(r.day)}</td><td>${money(r.app_store)}</td><td>${money(r.admob)}</td><td>${money(r.ad_rev_est, 4)}</td><td>${num(r.trials)}</td><td>${num(r.purchases)}</td><td><b>${money(Number(r.app_store||0) + Number(ads||0))}</b></td></tr>`; }).join('')}
+    </table></div>
+    <p class="small mute">"Ads (est.)" comes from AdMob's impression-level revenue callbacks in the app. Turn it on once in <a target="_blank" rel="noopener" href="https://admob.google.com/v2/settings/account">AdMob → Settings → Account → Impression-level ad revenue</a>.</p>`));
+  const saveSetting = async (key, val) => { const { error } = await sb.from('settings').upsert({ key, value: val, updated_at: new Date().toISOString() }); if (error) throw error; };
+  $('#vnSave').onclick = async () => { try { await saveSetting('asc', { ...asc, vendor_number: $('#vn').value.trim() || null }); toast('Saved'); } catch (e) { $('#ascMsg').textContent = e.message; } };
+  $('#ascSync').onclick = async () => { $('#ascMsg').textContent = 'Syncing…'; const { data, error } = await sb.functions.invoke('sales-sync', { body: { days: 30 } }); $('#ascMsg').innerHTML = error ? esc(await errText(error)) : '<span class="ok">Synced ' + (data.results || []).length + ' days</span>'; };
+  $('#admSave')?.addEventListener('click', async () => { const sec = $('#csec').value; await saveSetting('admob', { ...adm, client_id: $('#cid').value.trim(), client_secret: sec.startsWith('••') ? adm.client_secret : sec.trim() }); toast('Saved'); revenue(); });
+  $('#admConnect')?.addEventListener('click', async () => { const { data, error } = await sb.functions.invoke('admob', { body: { action: 'auth_url', redirect_uri: C.adminUrl } }); if (error) return $('#admMsg').textContent = await errText(error); location.href = data.url; });
+  $('#admSync')?.addEventListener('click', async () => { $('#admMsg').textContent = 'Syncing…'; const { data, error } = await sb.functions.invoke('admob', { body: { action: 'sync', days: 30 } }); $('#admMsg').innerHTML = error ? esc(await errText(error)) : '<span class="ok">Synced ' + data.days + ' days</span>'; });
+}
+async function errText(e){ try { const j = await e.context.json(); return j.error || e.message; } catch { return e.message; } }
+
+// ---- ads studio ----
+async function signed(bucket, path, download){ if (!path) return null; const { data } = await sb.storage.from(bucket).createSignedUrl(path, 3600, download ? { download } : undefined); return data?.signedUrl ?? null; }
+async function ads(){
+  pane().replaceChildren(h(`<p class="dim">Loading…</p>`));
+  const since = new Date(Date.now() - 14 * 864e5).toISOString().slice(0, 10);
+  const { data: list, error } = await sb.from('ads').select('*').gte('day', since).order('day', { ascending: false }).order('idx');
+  if (error) return pane().replaceChildren(h(`<div class="card err">${esc(error.message)}</div>`));
+  if (!list.length) return pane().replaceChildren(h(`<div class="card"><h3>No ads yet</h3><p class="dim small">Five new ads are generated every morning on the studio Mac and appear here. Each one has a guide-voice preview until your reader records it.</p></div>`));
+  const byDay = {}; list.forEach(a => (byDay[a.day] ||= []).push(a));
+  const frag = document.createDocumentFragment();
+  const stats = { final: list.filter(a => a.status === 'final').length, waiting: list.filter(a => a.status === 'ready').length };
+  frag.append(h(`<p class="small dim">${stats.final} ready to post · ${stats.waiting} waiting for the reader · last 14 days</p>`));
+  for (const [day, items] of Object.entries(byDay)) {
+    frag.append(h(`<h2>${esc(new Date(day + 'T12:00').toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }))}</h2>`));
+    const grid = document.createElement('div'); grid.className = 'ads'; frag.append(grid);
+    for (const a of items) grid.append(adCard(a));
+  }
+  pane().replaceChildren(frag);
+}
+const STATUS = { ready: 'Waiting for reader', recorded: 'Recorded · finalizing', final: 'Ready to post', skipped: 'Skipped' };
+function adCard(a){
+  const el = document.createElement('div'); el.className = 'card ad';
+  const vid = a.final_path || a.placeholder_path;
+  el.innerHTML = `<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:8px"><b>#${a.idx} ${esc(a.title || a.concept || '')}</b><span class="pill p-${esc(a.status)}">${esc(STATUS[a.status] || a.status)}</span></div>
+    <div class="media"></div>
+    ${a.final_path ? '' : vid ? '<p class="small mute" style="margin:6px 0 0">Preview uses the guide voice until the reader records.</p>' : ''}
+    <p class="vo">“${esc(a.vo_text)}”</p>
+    ${a.take_path ? '<div class="take small dim"></div>' : ''}
+    <div class="row">
+      ${vid ? '<button class="btn sm pri" data-act="share">Share…</button><button class="btn sm" data-act="dl">Download</button>' : ''}
+      <button class="btn sm" data-act="cap" data-p="instagram">IG caption</button>
+      <button class="btn sm" data-act="cap" data-p="tiktok">TikTok caption</button>
+      <button class="btn sm" data-act="cap" data-p="youtube_shorts">Shorts caption</button>
+    </div>
+    <div class="row small">${['instagram','tiktok','youtube_shorts'].map(p => `<label style="display:flex;gap:6px;align-items:center;margin:0;color:var(--dim)"><input type="checkbox" data-post="${p}" style="width:auto" ${a.posted?.[p] ? 'checked' : ''}> posted ${p === 'youtube_shorts' ? 'Shorts' : p === 'instagram' ? 'IG' : 'TikTok'}</label>`).join('')}</div>`;
+  (async () => {
+    const m = $('.media', el);
+    const still = await signed('ads', a.still_path);
+    if (vid) { const v = document.createElement('video'); v.controls = true; v.playsInline = true; v.preload = 'none'; if (still) v.poster = still; v.src = await signed('ads', vid); m.append(v); }
+    else if (still) { const i = new Image(); i.src = still; i.alt = ''; m.append(i); }
+    if (a.take_path) { const t = $('.take', el); t.innerHTML = 'Reader take: '; const au = document.createElement('audio'); au.controls = true; au.style.width = '100%'; au.src = await signed('takes', a.take_path); t.append(au); }
+  })();
+  const fname = `RightSteps_${a.id}${a.final_path ? '' : '_guide-voice'}.mp4`;
+  const caption = p => { const c = a.captions?.[p] || ''; const tags = (a.hashtags || []).map(x => x.startsWith('#') ? x : '#' + x).join(' '); return c.includes('#') ? c : (c + (tags ? '\n\n' + tags : '')).trim(); };
+  el.addEventListener('click', async e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.act === 'cap') return copy(caption(b.dataset.p));
+    if (b.dataset.act === 'dl') { location.href = await signed('ads', vid, fname); return; }
+    if (b.dataset.act === 'share') {
+      b.disabled = true; b.textContent = 'Preparing…';
+      try {
+        const blob = await (await fetch(await signed('ads', vid))).blob();
+        const file = new File([blob], fname, { type: 'video/mp4' });
+        await copy(caption('instagram'));
+        if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], text: caption('instagram') });
+        else { const u = URL.createObjectURL(blob); const l = document.createElement('a'); l.href = u; l.download = fname; l.click(); setTimeout(() => URL.revokeObjectURL(u), 60000); }
+      } catch (err) { if (err.name !== 'AbortError') toast(err.message); }
+      b.disabled = false; b.textContent = 'Share…';
+    }
+  });
+  el.addEventListener('change', async e => {
+    const p = e.target.dataset?.post; if (!p) return;
+    const posted = { ...(a.posted || {}) }; if (e.target.checked) posted[p] = new Date().toISOString(); else delete posted[p];
+    const { error } = await sb.from('ads').update({ posted }).eq('id', a.id); if (error) toast(error.message); else { a.posted = posted; toast('Saved'); }
+  });
+  return el;
+}
+
+// ---- reader ----
+async function reader(){
+  pane().replaceChildren(h(`<p class="dim">Loading…</p>`));
+  const [{ data: r }, { data: msgs }, { data: recent }] = await Promise.all([
+    sb.from('readers').select('*').eq('active', true).maybeSingle(),
+    sb.from('messages').select('*').order('created_at', { ascending: false }).limit(20),
+    sb.from('ads').select('status,recorded_at').gte('day', new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10)),
+  ]);
+  const link = r ? C.boothUrl + '?t=' + r.token : '';
+  const rec = (recent || []).filter(a => a.status !== 'ready').length, tot = (recent || []).length;
+  const msg = r ? `Hi ${r.name.split(' ')[0]}! Today's RightSteps scripts are ready to record (about a minute of reading). Open this on your phone: ${link}` : '';
+  pane().replaceChildren(h(`
+    <div class="two">
+      <div class="card"><h3>Assigned reader</h3>
+        ${r ? `<p style="margin:4px 0"><b>${esc(r.name)}</b></p><p class="small dim" style="margin:0">${esc(r.email || 'no email')} · ${esc(r.phone || 'no phone')} · daily message by <b>${esc(r.channel)}</b></p>
+        <p class="small dim">Recorded ${rec} of ${tot} scripts this week.</p>
+        <label>Their booth link (records every ad)</label><p class="mono">${esc(link)}</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" id="cp">Copy link</button>
+        ${r.phone ? `<a class="btn sm" href="sms:${esc(r.phone)}${/iPhone|iPad|Mac/.test(navigator.userAgent) ? '&' : '?'}body=${encodeURIComponent(msg)}">Text it</a>` : ''}
+        ${r.email ? `<a class="btn sm" href="mailto:${esc(r.email)}?subject=${encodeURIComponent('RightSteps scripts to record')}&body=${encodeURIComponent(msg)}">Email it</a>` : ''}
+        <button class="btn sm" id="rot">New link</button></div>
+        <p class="small mute">"New link" turns off the old one, e.g. if it was forwarded.</p>` : '<p class="dim">No reader assigned yet. Add one and they\'ll get a message every morning when the 5 new scripts are ready.</p>'}
+      </div>
+      <div class="card"><h3>${r ? 'Replace reader' : 'Assign a reader'}</h3>
+        <form id="f"><label>Name</label><input id="n" required>
+        <label>Email</label><input id="e" type="email">
+        <label>Mobile (for iMessage/text)</label><input id="p" type="tel" placeholder="+1…">
+        <label>Daily message by</label><select id="ch"><option value="email">Email</option><option value="imessage">iMessage</option><option value="both">Both</option><option value="none">Don't message (I'll send the link)</option></select>
+        <div style="height:12px"></div><button class="btn pri">Assign</button></form>
+        <p class="small mute">One reader voices every ad. Assigning someone new turns off the previous reader's link.</p></div>
+    </div>
+    <h2>Daily messages</h2>
+    <div class="card tblwrap"><table><tr><th>Day</th><th>To</th><th>Via</th><th>Status</th></tr>${(msgs || []).map(m => `<tr><td>${esc(m.day)}</td><td>${esc(m.to_addr || '')}</td><td>${esc(m.channel)}</td><td>${esc(m.status)}</td></tr>`).join('') || '<tr><td class="mute">none yet</td><td></td><td></td><td></td></tr>'}</table></div>`));
+  $('#cp')?.addEventListener('click', () => copy(link));
+  $('#rot')?.addEventListener('click', async () => { if (!confirm('Turn off the current link and make a new one?')) return; const { error } = await sb.rpc('rotate_reader_link'); if (error) toast(error.message); else reader(); });
+  $('#f').onsubmit = async e => {
+    e.preventDefault();
+    const { error } = await sb.rpc('assign_reader', { p_name: $('#n').value, p_email: $('#e').value, p_phone: $('#p').value, p_channel: $('#ch').value });
+    if (error) return toast(error.message);
+    toast('Reader assigned'); reader();
+  };
+}
+
+// ---- settings ----
+async function settings(){
+  const { data: st } = await sb.from('settings').select('key,value').eq('key', 'studio').maybeSingle();
+  const s = st?.value || {};
+  const { data: f } = await sb.auth.mfa.listFactors();
+  pane().replaceChildren(h(`
+    <div class="two">
+      <div class="card"><h3>Ad studio</h3>
+        <label>Ads per day</label><input id="apd" type="number" min="1" max="10" value="${esc(s.ads_per_day ?? 5)}">
+        <label>Keep videos in the cloud for (days)</label><input id="ret" type="number" min="3" max="60" value="${esc(s.cloud_retention_days ?? 14)}">
+        <p class="small mute">Older videos stay on the studio Mac in Downloads → RightSteps Ads. The free cloud tier holds about 1 GB.</p>
+        <button class="btn sm" id="sv">Save</button></div>
+      <div class="card"><h3>Security</h3>
+        <p class="small dim">Two-factor devices:</p>
+        <ul class="small dim">${(f?.totp || []).filter(x => x.status === 'verified').map(x => `<li>${esc(x.friendly_name || 'Authenticator')} · added ${esc(x.created_at.slice(0,10))}</li>`).join('')}</ul>
+        <button class="btn sm" id="add2">Add a backup authenticator</button>
+        <p class="small mute">Add a second device so losing your phone doesn't lock you out.</p></div>
+    </div>`));
+  $('#sv').onclick = async () => { const { error } = await sb.from('settings').upsert({ key: 'studio', value: { ...s, ads_per_day: +$('#apd').value, cloud_retention_days: +$('#ret').value }, updated_at: new Date().toISOString() }); toast(error ? error.message : 'Saved'); };
+  $('#add2').onclick = () => screenEnroll();
+}
+
+// AdMob OAuth return (?code=…&state=…)
+(async () => {
+  const q = new URLSearchParams(location.search);
+  if (q.get('code') && q.get('state')) {
+    history.replaceState(null, '', location.pathname + '#tab=revenue');
+    const { data: aal } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aal?.currentLevel === 'aal2') {
+      const { data, error } = await sb.functions.invoke('admob', { body: { action: 'exchange', code: q.get('code'), state: q.get('state'), redirect_uri: C.adminUrl } });
+      toast(error ? 'AdMob: ' + await errText(error) : 'AdMob connected');
+      if (!error) sb.functions.invoke('admob', { body: { action: 'sync', days: 30 } });
+    }
+    tab = 'revenue';
+  }
+  route();
+})();
+</script>
+</body>
+</html>

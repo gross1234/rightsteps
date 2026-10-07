@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>RightSteps Voice Booth</title>
+<style>
+:root{color-scheme:dark;--bg:#070A1C;--card:rgba(255,255,255,.06);--line:rgba(255,255,255,.12);--text:#fff;--dim:#b3b8d6;--mute:#7d83a8;--gold:#FFC65C;--pink:#FF4FD8;--green:#4FFFA1;--red:#FF5A5A}
+*{box-sizing:border-box}html,body{margin:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Rounded","Segoe UI",Roboto,sans-serif;background:linear-gradient(#141A3A,var(--bg) 360px) var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+.wrap{max-width:620px;margin:0 auto;padding:18px 16px 80px}
+h1{font-size:28px;letter-spacing:-.6px;margin:6px 0 2px;background:linear-gradient(90deg,#FFE066,#FF8A3D,#FF4FD8);-webkit-background-clip:text;background-clip:text;color:transparent}
+.dim{color:var(--dim)}.mute{color:var(--mute)}.small{font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin:14px 0}
+.tips{font-size:14px;line-height:1.5;color:var(--dim);padding-left:18px;margin:8px 0 0}
+.day{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--mute);margin:26px 0 0}
+.head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.pill{border-radius:999px;padding:3px 10px;font-size:12px;font-weight:800;background:rgba(255,198,92,.16);color:var(--gold);white-space:nowrap}
+.pill.done{background:rgba(79,255,161,.16);color:var(--green)}
+.media{display:flex;gap:12px;margin:12px 0}
+.media img{width:96px;aspect-ratio:9/16;object-fit:cover;border-radius:10px;background:#000;flex:none}
+.script{font-size:21px;line-height:1.45;font-weight:650;letter-spacing:-.2px}
+.dir{font-size:14px;color:var(--dim);margin-top:8px;font-style:italic}
+.meta{font-size:13px;color:var(--mute);margin-top:6px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:14px;padding:12px 16px;font-weight:800;cursor:pointer;background:rgba(255,255,255,.1);color:var(--text);min-height:48px;font-size:16px;touch-action:manipulation;text-decoration:none}
+.btn.rec{background:var(--red);color:#fff;flex:1}.btn.pri{background:linear-gradient(90deg,#FFB13D,#FF4FD8);color:#14081f;flex:1}
+.btn:disabled{opacity:.45}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.meter{height:8px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden;margin-top:12px;position:relative}
+.meter i{position:absolute;inset:0 auto 0 0;width:0;background:var(--green);transition:width .05s}
+.timebar{height:10px;background:rgba(255,255,255,.08);border-radius:99px;margin-top:10px;position:relative;overflow:hidden}
+.timebar b{position:absolute;inset:0 auto 0 0;width:0;background:var(--gold)}
+.timebar .t{position:absolute;top:0;bottom:0;width:2px;background:#fff}.timebar .m{position:absolute;top:0;bottom:0;width:2px;background:var(--red)}
+.clock{font-variant-numeric:tabular-nums;font-size:14px;color:var(--dim);margin-top:6px;display:flex;justify-content:space-between}
+audio,video{width:100%;margin-top:10px}
+video{border-radius:12px;max-height:60vh;background:#000}
+.count{position:fixed;inset:0;background:rgba(7,10,28,.85);display:grid;place-items:center;font-size:120px;font-weight:900;z-index:5}
+.err{color:var(--red);font-size:14px;margin-top:8px}
+.ok{color:var(--green)}
+.hide{display:none!important}
+.done-all{text-align:center;padding:28px 16px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>RightSteps Voice Booth</h1>
+  <div id="hello" class="dim">Loading your scripts…</div>
+  <div class="card" id="tips">
+    <b>Before you start</b>
+    <ul class="tips">
+      <li>Find a quiet room with soft stuff around (a closet full of clothes is perfect). No fans or TV.</li>
+      <li>Hold the phone about a hand's width from your mouth, slightly off to the side.</li>
+      <li>Tap <b>Guide</b> to hear the pacing, then <b>Record</b>. Read it like you're telling a friend about a game you love.</li>
+      <li>Aim for the white line on the timer; never go past the red one. Re-record as often as you like; only the take you send is used.</li>
+    </ul>
+  </div>
+  <div id="list"></div>
+</div>
+<div id="count" class="count hide"></div>
+<script src="../shared/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const C = window.RS_CONFIG;
+const sb = supabase.createClient(C.url, C.key, { auth: { persistSession: false } });
+const T = new URLSearchParams(location.search).get('t') || '';
+const FN = C.url + '/functions/v1/booth';
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const hdr = { apikey: C.key, Authorization: 'Bearer ' + C.key, 'Content-Type': 'application/json' };
+
+// Pick a format this browser can record (iPhone Safari: mp4/AAC; Chrome/Firefox: webm/opus).
+const TYPES = [['audio/mp4;codecs=mp4a.40.2','m4a'],['audio/mp4','m4a'],['audio/webm;codecs=opus','webm'],['audio/webm','webm'],['audio/ogg;codecs=opus','ogg']];
+const FMT = (window.MediaRecorder && TYPES.find(([t]) => MediaRecorder.isTypeSupported(t))) || null;
+
+let stream = null, ac = null, analyser = null, busy = false, wake = null;
+async function mic(){
+  if (stream) return stream;
+  stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } });
+  ac = new (window.AudioContext || window.webkitAudioContext)();
+  analyser = ac.createAnalyser(); analyser.fftSize = 1024;
+  ac.createMediaStreamSource(stream).connect(analyser);
+  return stream;
+}
+
+async function load(){
+  if (!T) return $('#hello').innerHTML = '<span class="err">This link is missing its code. Use the full link you were sent.</span>';
+  const r = await fetch(FN + '?t=' + encodeURIComponent(T), { headers: hdr });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) return $('#hello').innerHTML = `<span class="err">${esc(j.error || 'Could not load scripts.')}</span>`;
+  const todo = j.ads.filter(a => a.status === 'ready').length;
+  $('#hello').innerHTML = `Hi ${esc(j.reader.name.split(' ')[0])}! ${todo ? `<b>${todo}</b> script${todo > 1 ? 's' : ''} to record.` : 'You\'re all caught up. 🎉'}`;
+  if (!FMT) $('#hello').innerHTML += '<div class="err">This browser can\'t record audio. Open the link in Safari (iPhone) or Chrome.</div>';
+  const list = $('#list'); list.innerHTML = '';
+  if (!j.ads.length) { list.innerHTML = '<div class="card done-all"><b>Nothing to record right now.</b><p class="dim small">New scripts arrive every morning.</p></div>'; return; }
+  let lastDay = '';
+  for (const a of j.ads) {
+    if (a.day !== lastDay) { lastDay = a.day; list.insertAdjacentHTML('beforeend', `<div class="day">${esc(new Date(a.day + 'T12:00').toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }))}</div>`); }
+    list.append(card(a));
+  }
+}
+
+function card(a){
+  const el = document.createElement('div'); el.className = 'card';
+  const target = Number(a.target_seconds || 14), max = Number(a.max_seconds || target + 4);
+  el.innerHTML = `
+    <div class="head"><b>Script ${a.idx}</b><span class="pill ${a.status === 'recorded' ? 'done' : ''}">${a.status === 'recorded' ? 'Sent ✓' : 'To record'}</span></div>
+    <div class="media">${a.still_url ? `<img src="${esc(a.still_url)}" alt="">` : ''}<div><div class="script">${esc(a.vo_text)}</div>
+    ${a.direction ? `<div class="dir">${esc(a.direction)}</div>` : ''}<div class="meta">Aim for ~${target.toFixed(0)}s · max ${max.toFixed(0)}s</div></div></div>
+    <div class="guide"></div>
+    <div class="row">${a.preview_url ? '<button class="btn" data-a="guide">▶ Guide</button>' : ''}<button class="btn rec" data-a="rec">● Record</button></div>
+    <div class="live hide"><div class="meter"><i></i></div><div class="timebar"><b></b><span class="t" style="left:${(target / (max * 1.15) * 100).toFixed(1)}%"></span><span class="m" style="left:${(max / (max * 1.15) * 100).toFixed(1)}%"></span></div><div class="clock"><span class="el">0.0s</span><span>target ${target.toFixed(0)}s</span></div></div>
+    <div class="review hide"><audio controls playsinline></audio><div class="row"><button class="btn" data-a="redo">↺ Redo</button><button class="btn pri" data-a="send">Send this take</button></div></div>
+    <div class="msg small"></div>`;
+  let rec = null, chunks = [], blob = null, t0 = 0, raf = 0;
+  const msg = (t, cls = '') => { $('.msg', el).className = 'msg small ' + cls; $('.msg', el).innerHTML = t; };
+  const tick = () => {
+    const s = (performance.now() - t0) / 1000;
+    $('.el', el).textContent = s.toFixed(1) + 's';
+    $('.timebar b', el).style.width = Math.min(100, s / (max * 1.15) * 100) + '%';
+    $('.timebar b', el).style.background = s > max ? 'var(--red)' : s > target ? '#FF8A3D' : 'var(--gold)';
+    if (analyser) { const d = new Uint8Array(analyser.fftSize); analyser.getByteTimeDomainData(d); let pk = 0; for (const v of d) pk = Math.max(pk, Math.abs(v - 128)); $('.meter i', el).style.width = Math.min(100, pk / 128 * 140) + '%'; $('.meter i', el).style.background = pk > 120 ? 'var(--red)' : 'var(--green)'; }
+    if (s > max * 1.15) return stop();
+    raf = requestAnimationFrame(tick);
+  };
+  async function start(){
+    if (busy || !FMT) return; busy = true; msg('');
+    try { await mic(); if (ac.state !== 'running') await ac.resume(); }
+    catch (e) { busy = false; return msg('Microphone blocked. Allow the mic for this site in your browser settings, then reload.', 'err'); }
+    try { wake = await navigator.wakeLock?.request('screen'); } catch {}
+    const cd = $('#count'); cd.classList.remove('hide');
+    for (const n of [3, 2, 1]) { cd.textContent = n; await new Promise(r => setTimeout(r, 650)); }
+    cd.classList.add('hide');
+    chunks = []; rec = new MediaRecorder(stream, { mimeType: FMT[0], audioBitsPerSecond: 128000 });
+    rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+    rec.onstop = () => { blob = new Blob(chunks, { type: FMT[0].split(';')[0] }); $('.review audio', el).src = URL.createObjectURL(blob); $('.review', el).classList.remove('hide'); $('.live', el).classList.add('hide'); busy = false; wake?.release?.(); const s = (performance.now() - t0) / 1000; if (s > max) msg(`That take ran ${s.toFixed(1)}s, over the ${max.toFixed(0)}s max. Try a little quicker.`, 'err'); };
+    rec.start(250); t0 = performance.now();
+    $('.live', el).classList.remove('hide'); $('.review', el).classList.add('hide');
+    const b = $('[data-a=rec]', el); b.textContent = '■ Stop'; b.dataset.a = 'stop';
+    tick();
+  }
+  function stop(){ cancelAnimationFrame(raf); if (rec?.state === 'recording') rec.stop(); const b = $('[data-a=stop]', el); if (b) { b.textContent = '● Record'; b.dataset.a = 'rec'; } }
+  async function send(){
+    if (!blob) return; const b = $('[data-a=send]', el); b.disabled = true; b.textContent = 'Sending…';
+    try {
+      const r1 = await fetch(FN, { method: 'POST', headers: hdr, body: JSON.stringify({ t: T, ad_id: a.id, ext: FMT[1] }) });
+      const j1 = await r1.json(); if (!r1.ok) throw new Error(j1.error);
+      const up = await sb.storage.from('takes').uploadToSignedUrl(j1.path, j1.token, blob, { contentType: blob.type });
+      if (up.error) throw up.error;
+      const r2 = await fetch(FN, { method: 'POST', headers: hdr, body: JSON.stringify({ t: T, ad_id: a.id, path: j1.path, action: 'submit' }) });
+      const j2 = await r2.json(); if (!r2.ok) throw new Error(j2.error);
+      $('.pill', el).textContent = 'Sent ✓'; $('.pill', el).classList.add('done');
+      msg('Sent! Thank you. You can re-record and send again if you want to replace it.', 'ok');
+      b.textContent = 'Sent ✓';
+    } catch (e) { msg('Upload failed: ' + esc(e.message || e) + '. Check your connection and tap Send again.', 'err'); b.disabled = false; b.textContent = 'Send this take'; }
+  }
+  el.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const act = b.dataset.a;
+    if (act === 'rec') start(); else if (act === 'stop') stop(); else if (act === 'send') send();
+    else if (act === 'redo') { $('.review', el).classList.add('hide'); start(); }
+    else if (act === 'guide') {
+      const g = $('.guide', el);
+      if (!g.firstChild) { const v = document.createElement('video'); v.controls = true; v.playsInline = true; v.src = a.preview_url; g.append(v); v.play().catch(() => {}); b.textContent = 'Hide guide'; }
+      else { g.innerHTML = ''; b.textContent = '▶ Guide'; }
+    }
+  });
+  return el;
+}
+document.addEventListener('keydown', e => { if (e.code === 'Space' && e.target === document.body) e.preventDefault(); });
+load();
+</script>
+</body>
+</html>
