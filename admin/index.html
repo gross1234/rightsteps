@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
 <title>RightSteps HQ</title>
-<link rel="icon" href="../favicon.png">
+<link rel="icon" href="../shared/icon.png"><link rel="apple-touch-icon" href="../shared/icon.png">
 <style>
 :root{color-scheme:dark;--bg:#070A1C;--bg2:#0d1230;--card:rgba(255,255,255,.055);--line:rgba(255,255,255,.11);--text:#fff;--dim:#b3b8d6;--mute:#7d83a8;--gold:#FFC65C;--pink:#FF4FD8;--cyan:#4FD8FF;--green:#4FFFA1;--red:#FF6B6B;--r:16px}
 *{box-sizing:border-box}html,body{margin:0}
@@ -53,7 +53,9 @@ table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:8px 6px;b
 .two{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
 .hide{display:none!important}
 details summary{cursor:pointer;color:var(--dim)}
-@media (max-width:520px){.kpi .v{font-size:22px}th,td{padding:7px 4px}}
+@media (max-width:520px){.kpi .v{font-size:22px}th,td{padding:7px 4px}#who{display:none}}
+.chartwrap{position:relative}.axis{display:flex;justify-content:space-between;font-size:11px;color:var(--mute);margin-top:2px}.ymax{font-size:11px;color:var(--mute)}
+.ad video,.ad img{max-height:62vh;object-fit:contain}
 </style>
 </head>
 <body>
@@ -190,8 +192,7 @@ function lineChart(series, keys, colors, fmt = num){
   const max = Math.max(1, ...series.flatMap(d => keys.map(k => Number(d[k] || 0))));
   const x = i => P + (n <= 1 ? 0 : i * (W - P * 2) / (n - 1)), y = v => H - P - (v / max) * (H - P * 2);
   const paths = keys.map((k, j) => `<path d="${series.map((d,i) => (i?'L':'M') + x(i).toFixed(1) + ' ' + y(Number(d[k]||0)).toFixed(1)).join(' ')}" fill="none" stroke="${colors[j]}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`).join('');
-  const lbl = series.length ? `<text x="${P}" y="${H-6}" fill="#7d83a8" font-size="11">${esc(series[0].day.slice(5))}</text><text x="${W-P}" y="${H-6}" fill="#7d83a8" font-size="11" text-anchor="end">${esc(series[n-1].day.slice(5))}</text>` : '';
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"><line x1="${P}" x2="${W-P}" y1="${H-P}" y2="${H-P}" stroke="rgba(255,255,255,.12)"/><text x="${P}" y="14" fill="#7d83a8" font-size="11">${esc(fmt(max))}</text>${paths}${lbl}</svg>`;
+  return `<div class="ymax">max ${esc(fmt(max))}</div><svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"><line x1="${P}" x2="${W-P}" y1="${H-P}" y2="${H-P}" stroke="rgba(255,255,255,.12)"/>${paths}</svg>${series.length ? `<div class="axis"><span>${esc(series[0].day.slice(5))}</span><span>${esc(series[n-1].day.slice(5))}</span></div>` : ''}`;
 }
 function barChart(series, keys, colors, fmt){
   const W = 640, H = 180, P = 26, n = Math.max(series.length, 1);
@@ -202,7 +203,7 @@ function barChart(series, keys, colors, fmt){
   series.forEach((d, i) => { let acc = 0; keys.forEach((k, j) => { const v = Number(d[k] || 0); if (!v) return;
     const hh = v / max * (H - P * 2), yy = H - P - (acc + v) / max * (H - P * 2); acc += v;
     bars += `<rect x="${(P + i * bw + bw * .15).toFixed(1)}" y="${yy.toFixed(1)}" width="${(bw * .7).toFixed(1)}" height="${hh.toFixed(1)}" rx="2" fill="${colors[j]}"><title>${esc(d.day)}: ${esc(fmt(v))}</title></rect>`; }); });
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"><line x1="${P}" x2="${W-P}" y1="${H-P}" y2="${H-P}" stroke="rgba(255,255,255,.12)"/><text x="${P}" y="14" fill="#7d83a8" font-size="11">${esc(fmt(max))}</text>${bars}</svg>`;
+  return `<div class="ymax">max ${esc(fmt(max))}</div><svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"><line x1="${P}" x2="${W-P}" y1="${H-P}" y2="${H-P}" stroke="rgba(255,255,255,.12)"/>${bars}</svg>${series.length ? `<div class="axis"><span>${esc(series[0].day.slice(5))}</span><span>${esc(series[series.length-1].day.slice(5))}</span></div>` : ''}`;
 }
 const legend = (names, colors) => `<div class="legend">${names.map((n,i) => `<span><i style="background:${colors[i]}"></i>${esc(n)}</span>`).join('')}</div>`;
 
