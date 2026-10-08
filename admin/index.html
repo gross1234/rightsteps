@@ -307,10 +307,10 @@ async function ads(){
 const STATUS = { ready: 'Waiting for reader', recorded: 'Recorded · finalizing', final: 'Ready to post', skipped: 'Skipped' };
 function adCard(a){
   const el = document.createElement('div'); el.className = 'card ad';
-  const vid = a.final_path || a.placeholder_path;
+  const vid = a.final_path || (a.preview_path !== a.placeholder_path ? a.preview_path : null);
   el.innerHTML = `<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:8px"><b>#${a.idx} ${esc(a.title || a.concept || '')}</b><span class="pill p-${esc(a.status)}">${esc(STATUS[a.status] || a.status)}</span></div>
     <div class="media"></div>
-    ${a.final_path ? '' : vid ? '<p class="small mute" style="margin:6px 0 0">Preview uses the guide voice until the reader records.</p>' : ''}
+    ${a.final_path ? '' : vid ? '<p class="small mute" style="margin:6px 0 0">Music and game sounds only. The voice is added when the reader records.</p>' : '<p class="small mute" style="margin:6px 0 0">Preview coming with the next studio run.</p>'}
     <p class="vo">“${esc(a.vo_text)}”</p>
     ${a.take_path ? '<div class="take small dim"></div>' : ''}
     <div class="row">
@@ -327,7 +327,7 @@ function adCard(a){
     else if (still) { const i = new Image(); i.src = still; i.alt = ''; m.append(i); }
     if (a.take_path) { const t = $('.take', el); t.innerHTML = 'Reader take: '; const au = document.createElement('audio'); au.controls = true; au.style.width = '100%'; au.src = await signed('takes', a.take_path); t.append(au); }
   })();
-  const fname = `RightSteps_${a.id}${a.final_path ? '' : '_guide-voice'}.mp4`;
+  const fname = `RightSteps_${a.id}${a.final_path ? '' : '_no-voice'}.mp4`;
   const caption = p => { const c = a.captions?.[p] || ''; const tags = (a.hashtags || []).map(x => x.startsWith('#') ? x : '#' + x).join(' '); return c.includes('#') ? c : (c + (tags ? '\n\n' + tags : '')).trim(); };
   el.addEventListener('click', async e => {
     const b = e.target.closest('button'); if (!b) return;
@@ -369,12 +369,14 @@ async function reader(){
       <div class="card"><h3>Assigned reader</h3>
         ${r ? `<p style="margin:4px 0"><b>${esc(r.name)}</b></p><p class="small dim" style="margin:0">${esc(r.email || 'no email')} · ${esc(r.phone || 'no phone')} · daily message by <b>${esc(r.channel)}</b></p>
         <p class="small dim">Recorded ${rec} of ${tot} scripts this week.</p>
+        <label>Reading speed <span class="mute">(teleprompter + guide; the reader can also change it in the booth)</span></label>
+        <select id="pace" style="max-width:220px">${[0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5].map(v => `<option value="${v}" ${Math.abs(Number(r.pace ?? 1) - v) < 0.05 ? 'selected' : ''}>${v.toFixed(1)}× ${v === 1 ? '(2.5 words/s)' : v > 1 ? 'faster' : 'slower'}</option>`).join('')}</select>
         <label>Their booth link (records every ad)</label><p class="mono">${esc(link)}</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" id="cp">Copy link</button>
         ${r.phone ? `<a class="btn sm" href="sms:${esc(r.phone)}${/iPhone|iPad|Mac/.test(navigator.userAgent) ? '&' : '?'}body=${encodeURIComponent(msg)}">Text it</a>` : ''}
         ${r.email ? `<a class="btn sm" href="mailto:${esc(r.email)}?subject=${encodeURIComponent('RightSteps scripts to record')}&body=${encodeURIComponent(msg)}">Email it</a>` : ''}
         <button class="btn sm" id="rot">New link</button></div>
-        <p class="small mute">"New link" turns off the old one, e.g. if it was forwarded.</p>` : '<p class="dim">No reader assigned yet. Add one and they\'ll get a message every morning when the 5 new scripts are ready.</p>'}
+        <p class="small mute">"New link" turns off the old one, e.g. if it was forwarded.</p>` : '<p class="dim">No reader assigned yet. Add one and they\'ll get their booth link within a minute, then a message every morning when new scripts are ready.</p>'}
       </div>
       <div class="card"><h3>${r ? 'Replace reader' : 'Assign a reader'}</h3>
         <form id="f"><label>Name</label><input id="n" required>
@@ -387,6 +389,7 @@ async function reader(){
     <h2>Daily messages</h2>
     <div class="card tblwrap"><table><tr><th>Day</th><th>To</th><th>Via</th><th>Status</th></tr>${(msgs || []).map(m => `<tr><td>${esc(m.day)}</td><td>${esc(m.to_addr || '')}</td><td>${esc(m.channel)}</td><td>${esc(m.status)}</td></tr>`).join('') || '<tr><td class="mute">none yet</td><td></td><td></td><td></td></tr>'}</table></div>`));
   $('#cp')?.addEventListener('click', () => copy(link));
+  $('#pace')?.addEventListener('change', async e => { const { error } = await sb.from('readers').update({ pace: Number(e.target.value) }).eq('id', r.id); toast(error ? error.message : 'Reading speed saved'); });
   $('#rot')?.addEventListener('click', async () => { if (!confirm('Turn off the current link and make a new one?')) return; const { error } = await sb.rpc('rotate_reader_link'); if (error) toast(error.message); else reader(); });
   $('#f').onsubmit = async e => {
     e.preventDefault();

@@ -79,6 +79,10 @@ video{border-radius:12px;max-height:60vh;background:#000}
       <li>Aim for the white line on the timer; never go past the red one. Re-record as often as you like; only the take you send is used.</li>
     </ul>
   </div>
+  <div class="card hide" id="paceCard" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+    <div><b>Reading speed</b><div class="small dim">Sets the gold word, the "aim for" times and the Guide.</div></div>
+    <div style="display:flex;align-items:center;gap:6px;flex:none"><button class="btn" id="paceDn" aria-label="Slower" style="min-width:48px">−</button><b id="paceVal" style="min-width:48px;text-align:center">1.0×</b><button class="btn" id="paceUp" aria-label="Faster" style="min-width:48px">+</button></div>
+  </div>
   <div id="list"></div>
 </div>
 <div id="count" class="count hide"></div>
@@ -120,6 +124,15 @@ const TYPES = [['audio/mp4;codecs=mp4a.40.2','m4a'],['audio/mp4','m4a'],['audio/
 const FMT = (window.MediaRecorder && TYPES.find(([t]) => MediaRecorder.isTypeSupported(t))) || null;
 
 let stream = null, ac = null, analyser = null, busy = false, wake = null;
+let PACE = 1;   // reader's speed: 1.0 = the studio's 2.5 words/s
+const paceLabel = () => $('#paceVal').textContent = PACE.toFixed(1) + '×';
+async function setPace(d){
+  const next = Math.round(Math.min(1.6, Math.max(0.7, PACE + d)) * 10) / 10;
+  if (next === PACE || busy) return;
+  PACE = next; paceLabel();
+  fetch(FN, { method: 'POST', headers: hdr, body: JSON.stringify({ t: T, action: 'pace', pace: PACE }) }).catch(() => {});
+  clearTimeout(setPace.t); setPace.t = setTimeout(load, 350);   // redraw "aim for" times
+}
 async function mic(){
   if (stream) return stream;
   stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } });
@@ -282,6 +295,9 @@ async function load(){
   const r = await fetch(FN + '?t=' + encodeURIComponent(T), { headers: hdr });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) return $('#hello').innerHTML = `<span class="err">${esc(j.error || 'Could not load scripts.')}</span>`;
+  PACE = Number(j.reader.pace) || 1; paceLabel();
+  $('#paceCard').classList.remove('hide');
+  $('#paceDn').onclick = () => setPace(-0.1); $('#paceUp').onclick = () => setPace(0.1);
   const todo = j.ads.filter(a => a.status === 'ready').length;
   $('#hello').innerHTML = `Hi ${esc(j.reader.name.split(' ')[0])}! ${todo ? `<b>${todo}</b> script${todo > 1 ? 's' : ''} to record.` : 'You\'re all caught up. 🎉'}`;
   if (!FMT) $('#hello').innerHTML += '<div class="err">This browser can\'t record audio. Open the link in Safari (iPhone) or Chrome.</div>';
@@ -296,7 +312,9 @@ async function load(){
 
 function card(a){
   const el = document.createElement('div'); el.className = 'card';
-  const target = Number(a.target_seconds || 14), max = Number(a.max_seconds || target + 4);
+  // The reader's pace shortens the target; the max is the video's room for the voice, so it stays.
+  const max = Number(a.max_seconds || Number(a.target_seconds || 14) + 4);
+  const target = Math.min(max, Number(a.target_seconds || 14) / PACE);
   el.innerHTML = `
     <div class="head"><b>Script ${a.idx}</b><span class="pill ${a.status === 'recorded' ? 'done' : ''}">${a.status === 'recorded' ? 'Sent ✓' : 'To record'}</span></div>
     <div class="media">${a.still_url ? `<img src="${esc(a.still_url)}" alt="">` : ''}<div><div class="script">${esc(a.vo_text)}</div>
@@ -346,7 +364,7 @@ function card(a){
   // Review: the ad (muted) and the take play together from the top. Recording started with the
   // video, so starting both at 0 reproduces exactly what the reader did.
   const rv = $('.rv', el), ra = $('.ra', el), pv = $('.pv', el);
-  function resetReview(){ if (!rv) return; if (!rv.dataset.src) { rv.src = a.preview_url; rv.dataset.src = '1'; } rv.pause(); ra.pause(); try { rv.currentTime = 0; } catch {} ra.currentTime = 0; pv.classList.remove('playing'); $('.pvplay', el).textContent = '▶'; }
+  function resetReview(){ if (!rv) return; if (!rv.dataset.src) { rv.src = a.base_url || a.preview_url; rv.dataset.src = '1'; } rv.pause(); ra.pause(); try { rv.currentTime = 0; } catch {} ra.currentTime = 0; pv.classList.remove('playing'); $('.pvplay', el).textContent = '▶'; }
   function togglePlay(){
     if (!rv) return;
     if (pv.classList.contains('playing')) { rv.pause(); ra.pause(); pv.classList.remove('playing'); $('.pvplay', el).textContent = '▶'; return; }
@@ -386,7 +404,7 @@ function card(a){
     else if (act === 'redo') { resetReview(); $('.review', el).classList.add('hide'); start(); }
     else if (act === 'guide') {
       const g = $('.guide', el);
-      if (!g.firstChild) { const v = document.createElement('video'); v.controls = true; v.playsInline = true; v.src = a.preview_url; g.append(v); v.play().catch(() => {}); b.textContent = 'Hide guide'; }
+      if (!g.firstChild) { const v = document.createElement('video'); v.controls = true; v.playsInline = true; v.src = a.preview_url; v.playbackRate = v.defaultPlaybackRate = PACE; v.preservesPitch = true; v.addEventListener('loadedmetadata', () => { v.playbackRate = PACE; }); g.append(v); v.play().catch(() => {}); b.textContent = 'Hide guide'; }
       else { g.innerHTML = ''; b.textContent = '▶ Guide'; }
     }
   });
