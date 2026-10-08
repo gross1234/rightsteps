@@ -14,9 +14,12 @@
     --text: #FFFFFF; --muted: rgba(255,255,255,.66); --faint: rgba(255,255,255,.4); --danger: #EF4444;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  /* No background-attachment: fixed. iOS Safari drops the whole gradient with it. */
+  html { background: var(--bg-bottom); }
   html, body { margin: 0; min-height: 100%; }
   body {
-    background: linear-gradient(180deg, var(--bg-top), var(--bg-bottom)) fixed;
+    min-height: 100vh;
+    background: linear-gradient(180deg, var(--bg-top), var(--bg-bottom)) no-repeat;
     color: var(--text);
     font-family: ui-rounded, "SF Pro Rounded", -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
     padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
