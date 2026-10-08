@@ -72,9 +72,13 @@ video{border-radius:12px;max-height:60vh;background:#000}
   <div class="big">🎙️</div>
   <h2 id="micTitle">Turn on your microphone</h2>
   <p class="dim" style="text-align:center;margin:0" id="micWhy">The booth needs your mic to record. It's only used while you're recording.</p>
-  <ol id="micSteps"></ol>
-  <button class="btn pri" id="micRetry">I turned it on. Try again</button>
-  <button class="btn" id="micReload">Reload the page</button>
+  <button class="btn pri" id="micAllow">🎙️ Allow microphone</button>
+  <div id="micManual" class="hide">
+    <p class="dim small" style="margin:18px 0 0">Your browser is set to always block the mic, so it has to be switched on in settings. Websites aren't allowed to open settings directly, so here are the taps:</p>
+    <ol id="micSteps"></ol>
+    <button class="btn hide" id="micCopy"></button>
+    <button class="btn pri" id="micRetry">I turned it on. Try again</button>
+  </div>
   <p class="small mute" style="text-align:center" id="micMsg"></p>
 </div></div>
 <script src="../shared/config.js"></script>
@@ -131,20 +135,63 @@ function micSteps(err){
           `<span class="small dim">On a Mac, also check System Settings → Privacy & Security → Microphone and turn on your browser.</span>`];
 }
 let micWait = null;
-function showMicHelp(err){
+// Chrome/Edge on a computer: the site's own settings page. Pages can't open chrome:// links,
+// but the reader can paste it into the address bar.
+const SITE_SETTINGS = /Edg\//.test(UA) ? 'edge://settings/content/microphone' : 'chrome://settings/content/siteDetails?site=' + encodeURIComponent(location.origin);
+const DESKTOP_CHROMIUM = /Chrome\//.test(UA) && !IOS && !ANDROID;
+async function micState(){ try { return (await navigator.permissions.query({ name: 'microphone' })).state; } catch { return 'unknown'; } }
+function showManual(err){
   $('#micSteps').innerHTML = micSteps(err).map(t => `<li>${t}</li>`).join('');
+  const cp = $('#micCopy');
+  if (DESKTOP_CHROMIUM) { cp.textContent = '📋 Copy the settings link, then paste it in the address bar'; cp.classList.remove('hide'); }
+  else cp.classList.add('hide');
+  $('#micManual').classList.remove('hide');
+  $('#micAllow').classList.add('hide');
+}
+function showMicHelp(err){
   $('#micMsg').textContent = '';
+  $('#micManual').classList.add('hide'); $('#micAllow').classList.remove('hide');
+  // No mic hardware or an in-app browser: the Allow popup can't fix it, so go straight to the steps.
+  if (INAPP || ['NotFoundError', 'OverconstrainedError'].includes(err?.name)) showManual(err);
   $('#micHelp').classList.remove('hide');
+  micHelp.err = err;
   return new Promise(res => { micWait = res; });
+}
+const micHelp = {};
+// One tap: ask again. If the browser refuses without even showing its popup, it's a saved
+// "block" (or iPhone Safari remembering "Don't Allow" for this visit): reload once, which
+// brings the popup back on iPhone, then fall back to the settings steps.
+async function allowMic(){
+  $('#micMsg').textContent = '';
+  stream = null;
+  const t0 = performance.now();
+  try { await mic(); try { sessionStorage.removeItem('rsMicReload'); } catch {} hideMicHelp(true); return; }
+  catch (e) {
+    micHelp.err = e;
+    const instant = performance.now() - t0 < 400;   // no popup was shown
+    const st = await micState();
+    let reloaded = false; try { reloaded = sessionStorage.getItem('rsMicReload') === '1'; } catch {}
+    if (instant && st !== 'denied' && !reloaded) {
+      try { sessionStorage.setItem('rsMicReload', '1'); sessionStorage.setItem('rsMicAsk', '1'); } catch {}
+      return location.reload();
+    }
+    showManual(e);
+  }
 }
 function hideMicHelp(ok){ $('#micHelp').classList.add('hide'); micWait?.(ok); micWait = null; }
 async function retryMic(){
   stream = null; $('#micMsg').textContent = 'Checking…';
-  try { await mic(); hideMicHelp(true); }
-  catch (e) { $('#micSteps').innerHTML = micSteps(e).map(t => `<li>${t}</li>`).join(''); $('#micMsg').textContent = 'Still blocked. Follow the steps above, then try again.'; }
+  try { await mic(); $('#micMsg').textContent = ''; hideMicHelp(true); try { sessionStorage.removeItem('rsMicReload'); } catch {} }
+  catch (e) { showManual(e); $('#micMsg').textContent = 'Still blocked. Follow the steps above, then try again.'; }
 }
 $('#micRetry').onclick = retryMic;
-$('#micReload').onclick = () => location.reload();
+$('#micAllow').onclick = allowMic;
+$('#micCopy').onclick = () => copyText(SITE_SETTINGS);
+function toastMic(){ $('#hello').insertAdjacentHTML('beforeend', '<div class="ok small">🎙️ Mic is on. Tap Record on any script.</div>'); }
+async function copyText(t){ try { await navigator.clipboard.writeText(t); $('#micMsg').textContent = 'Copied. Paste it in the address bar, set Microphone to Allow, then come back.'; } catch { prompt('Copy this and paste it in the address bar:', t); } }
+// After the one-time reload, open the sheet straight on "Allow microphone" so the popup is one tap away.
+(() => { let ask = false; try { ask = sessionStorage.getItem('rsMicAsk') === '1'; sessionStorage.removeItem('rsMicAsk'); } catch {}
+  if (ask) setTimeout(() => { $('#micMsg').textContent = 'Tap Allow microphone, then choose Allow.'; showMicHelp(null).then(ok => ok && toastMic()); }, 300); })();
 // When the browser reports the permission flipping to allowed (Chrome, Safari 16+), carry on automatically.
 navigator.permissions?.query({ name: 'microphone' }).then(p => {
   p.onchange = () => { if (p.state === 'granted' && micWait) retryMic(); };
