@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Get RightSteps</title>
+<meta name="description" content="Download RightSteps: Sharpen Your Mind for iPhone.">
+<meta property="og:title" content="RightSteps: Sharpen Your Mind">
+<meta property="og:description" content="Download RightSteps for iPhone.">
+<style>
+  :root { --bg:#fff; --fg:#111; --muted:#666; --btn:#111; --btnfg:#fff; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#111; --fg:#f2f2f2; --muted:#aaa; --btn:#f2f2f2; --btnfg:#111; } }
+  body { margin:0; background:var(--bg); color:var(--fg); font:17px/1.4 -apple-system, system-ui, sans-serif;
+         min-height:100vh; display:flex; align-items:center; justify-content:center; text-align:center; padding:0 16px; }
+  h1 { font-size:24px; margin:0 0 8px; }
+  p { color:var(--muted); margin:0 0 20px; }
+  a.btn { display:inline-block; background:var(--btn); color:var(--btnfg); padding:14px 24px; border-radius:12px;
+          text-decoration:none; font-weight:600; }
+</style>
+</head>
+<body>
+<main>
+  <h1>RightSteps</h1>
+  <p id="msg">Taking you to the download…</p>
+  <a class="btn" id="go" href="https://testflight.apple.com/join/nu6vr3uT">Download for iPhone</a>
+</main>
+<script>
+// ── The only settings you ever need to touch ─────────────────────────────
+// OVERRIDE: put any URL here to force every visitor there (leave "" for automatic).
+var OVERRIDE = "";
+var APP_STORE_ID = "6819920939";
+var TESTFLIGHT = "https://testflight.apple.com/join/nu6vr3uT";
+// ─────────────────────────────────────────────────────────────────────────
+// Automatic mode: if the app is live on the App Store, go there; otherwise TestFlight.
+var APP_STORE = "https://apps.apple.com/app/id" + APP_STORE_ID;
+var done = false;
+function go(url) {
+  if (done) return; done = true;
+  document.getElementById("go").href = url;
+  if (/Android/i.test(navigator.userAgent)) {
+    document.getElementById("msg").textContent = "RightSteps is on iPhone for now. Open this link on an iPhone to download.";
+    return;
+  }
+  location.replace(url);
+}
+if (OVERRIDE) {
+  go(OVERRIDE);
+} else {
+  // iTunes lookup supports JSONP, so this works from a static page.
+  window.rsLookup = function (r) { go(r && r.resultCount > 0 ? APP_STORE : TESTFLIGHT); };
+  var s = document.createElement("script");
+  s.src = "https://itunes.apple.com/lookup?id=" + APP_STORE_ID + "&country=us&callback=rsLookup&t=" + Date.now();
+  s.onerror = function () { go(TESTFLIGHT); };
+  document.head.appendChild(s);
+  setTimeout(function () { go(TESTFLIGHT); }, 2500);
+}
+</script>
+</body>
+</html>
