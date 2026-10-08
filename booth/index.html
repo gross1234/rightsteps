@@ -42,6 +42,14 @@ video{border-radius:12px;max-height:60vh;background:#000}
 .ok{color:var(--green)}
 .hide{display:none!important}
 .done-all{text-align:center;padding:28px 16px}
+.sheet{position:fixed;inset:0;background:rgba(7,10,28,.96);z-index:6;overflow-y:auto;padding:28px 18px calc(28px + env(safe-area-inset-bottom))}
+.sheet .in{max-width:520px;margin:0 auto}
+.sheet .big{font-size:56px;text-align:center;margin:8px 0}
+.sheet h2{font-size:24px;text-align:center;margin:0 0 6px}
+.sheet ol{font-size:17px;line-height:1.55;padding-left:22px;margin:16px 0}
+.sheet ol li{margin-bottom:10px}
+.sheet .key{display:inline-block;background:rgba(255,255,255,.14);border-radius:7px;padding:1px 7px;font-weight:800}
+.sheet .btn{width:100%;margin-top:10px}
 </style>
 </head>
 <body>
@@ -60,6 +68,15 @@ video{border-radius:12px;max-height:60vh;background:#000}
   <div id="list"></div>
 </div>
 <div id="count" class="count hide"></div>
+<div id="micHelp" class="sheet hide" role="dialog" aria-modal="true" aria-labelledby="micTitle"><div class="in">
+  <div class="big">🎙️</div>
+  <h2 id="micTitle">Turn on your microphone</h2>
+  <p class="dim" style="text-align:center;margin:0" id="micWhy">The booth needs your mic to record. It's only used while you're recording.</p>
+  <ol id="micSteps"></ol>
+  <button class="btn pri" id="micRetry">I turned it on. Try again</button>
+  <button class="btn" id="micReload">Reload the page</button>
+  <p class="small mute" style="text-align:center" id="micMsg"></p>
+</div></div>
 <script src="../shared/config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
@@ -84,6 +101,54 @@ async function mic(){
   ac.createMediaStreamSource(stream).connect(analyser);
   return stream;
 }
+
+// ---- microphone blocked → walk them through turning it on ----
+const UA = navigator.userAgent;
+const IOS = /iPhone|iPad|iPod/.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1);
+const ANDROID = /Android/.test(UA);
+const INAPP = /FBAN|FBAV|Instagram|Line\/|GSA\/|Snapchat|TikTok|musical_ly|LinkedInApp|Twitter/i.test(UA);
+const CHROME_IOS = /CriOS/.test(UA), FIREFOX_IOS = /FxiOS/.test(UA);
+const k = t => `<span class="key">${t}</span>`;
+function micSteps(err){
+  const name = err?.name || '';
+  if (name === 'NotFoundError' || name === 'OverconstrainedError')
+    return ['This device didn\'t report a microphone. If you\'re using headphones, unplug them, or try a different phone.', `Then tap ${k('Try again')}.`];
+  if (INAPP)
+    return [`This link opened inside another app, and that app can't use the mic.`, `Tap the ${k('•••')} or ${k('share')} button and choose ${k(IOS ? 'Open in Safari' : 'Open in Chrome')}.`, `Then tap ${k('Record')} and choose ${k('Allow')}.`];
+  if (IOS && CHROME_IOS)
+    return [`Open the iPhone ${k('Settings')} app.`, `Tap ${k('Apps')} → ${k('Chrome')}.`, `Turn ${k('Microphone')} on.`, `Come back here and tap ${k('Try again')}. If Chrome asks, tap ${k('Allow')}.`];
+  if (IOS && FIREFOX_IOS)
+    return [`Open the iPhone ${k('Settings')} app.`, `Tap ${k('Apps')} → ${k('Firefox')}.`, `Turn ${k('Microphone')} on.`, `Come back here and tap ${k('Try again')}.`];
+  if (IOS)
+    return [`In Safari's address bar, tap the ${k('aA')} button (on newer iPhones it looks like ${k('☰')}).`, `Tap ${k('Website Settings')}.`, `Set ${k('Microphone')} to ${k('Allow')}.`, `Tap ${k('Try again')} below.`,
+            `<span class="small dim">Still blocked? Open the iPhone ${k('Settings')} app → ${k('Apps')} → ${k('Safari')} → ${k('Microphone')} → ${k('Ask')}, then reload this page.</span>`];
+  if (ANDROID)
+    return [`Tap the ${k('⚙︎')} or ${k('🔒')} icon at the left of the address bar.`, `Tap ${k('Permissions')} (or ${k('Site settings')}).`, `Set ${k('Microphone')} to ${k('Allow')}.`, `Tap ${k('Try again')} below.`,
+            `<span class="small dim">Still blocked? Phone ${k('Settings')} → ${k('Apps')} → ${k('Chrome')} → ${k('Permissions')} → ${k('Microphone')} → ${k('Allow')}.</span>`];
+  if (/Safari/.test(UA) && !/Chrome/.test(UA))
+    return [`In the menu bar, click ${k('Safari')} → ${k('Settings for This Website…')}.`, `Set ${k('Microphone')} to ${k('Allow')}.`, `Click ${k('Try again')} below.`];
+  return [`Click the icon at the left of the address bar (${k('🔒')} or ${k('⚙︎')}).`, `Turn ${k('Microphone')} on, or set it to ${k('Allow')}.`, `Click ${k('Try again')} below.`,
+          `<span class="small dim">On a Mac, also check System Settings → Privacy & Security → Microphone and turn on your browser.</span>`];
+}
+let micWait = null;
+function showMicHelp(err){
+  $('#micSteps').innerHTML = micSteps(err).map(t => `<li>${t}</li>`).join('');
+  $('#micMsg').textContent = '';
+  $('#micHelp').classList.remove('hide');
+  return new Promise(res => { micWait = res; });
+}
+function hideMicHelp(ok){ $('#micHelp').classList.add('hide'); micWait?.(ok); micWait = null; }
+async function retryMic(){
+  stream = null; $('#micMsg').textContent = 'Checking…';
+  try { await mic(); hideMicHelp(true); }
+  catch (e) { $('#micSteps').innerHTML = micSteps(e).map(t => `<li>${t}</li>`).join(''); $('#micMsg').textContent = 'Still blocked. Follow the steps above, then try again.'; }
+}
+$('#micRetry').onclick = retryMic;
+$('#micReload').onclick = () => location.reload();
+// When the browser reports the permission flipping to allowed (Chrome, Safari 16+), carry on automatically.
+navigator.permissions?.query({ name: 'microphone' }).then(p => {
+  p.onchange = () => { if (p.state === 'granted' && micWait) retryMic(); };
+}).catch(() => {});
 
 async function load(){
   if (!T) return $('#hello').innerHTML = '<span class="err">This link is missing its code. Use the full link you were sent.</span>';
@@ -127,8 +192,12 @@ function card(a){
   };
   async function start(){
     if (busy || !FMT) return; busy = true; msg('');
-    try { await mic(); if (ac.state !== 'running') await ac.resume(); }
-    catch (e) { busy = false; return msg('Microphone blocked. Allow the mic for this site in your browser settings, then reload.', 'err'); }
+    try { await mic(); }
+    catch (e) {
+      // Blocked: show the turn-it-on guide; once the mic works, continue straight into the take.
+      if (!(await showMicHelp(e))) { busy = false; return; }
+    }
+    try { if (ac.state !== 'running') await ac.resume(); } catch {}
     try { wake = await navigator.wakeLock?.request('screen'); } catch {}
     const cd = $('#count'); cd.classList.remove('hide');
     for (const n of [3, 2, 1]) { cd.textContent = n; await new Promise(r => setTimeout(r, 650)); }
