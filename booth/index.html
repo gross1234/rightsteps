@@ -304,7 +304,10 @@ function card(a){
     <div class="guide"></div>
     <div class="row">${a.preview_url ? '<button class="btn" data-a="guide">▶ Guide</button>' : ''}<button class="btn rec" data-a="rec">● Record</button></div>
     <div class="live hide"><div class="meter"><i></i></div><div class="timebar"><b></b><span class="t" style="left:${(target / (max * 1.15) * 100).toFixed(1)}%"></span><span class="m" style="left:${(max / (max * 1.15) * 100).toFixed(1)}%"></span></div><div class="clock"><span class="el">0.0s</span><span>target ${target.toFixed(0)}s</span></div></div>
-    <div class="review hide"><audio controls playsinline></audio><div class="row"><button class="btn" data-a="redo">↺ Redo</button><button class="btn pri" data-a="send">Send this take</button></div></div>
+    <div class="review hide">
+      ${a.preview_url ? `<div class="pv"><video class="rv" muted playsinline preload="metadata"${a.still_url ? ` poster="${esc(a.still_url)}"` : ''}></video><button class="pvplay" aria-label="Play your take with the video">▶</button></div>
+      <div class="pvnote">Your voice over the ad, the way it'll be posted</div><audio class="ra" playsinline preload="auto"></audio>` : '<audio class="ra" controls playsinline></audio>'}
+      <div class="row"><button class="btn" data-a="redo">↺ Redo</button><button class="btn pri" data-a="send">Send this take</button></div></div>
     <div class="msg small"></div>`;
   let rec = null, chunks = [], blob = null, t0 = 0, raf = 0;
   const msg = (t, cls = '') => { $('.msg', el).className = 'msg small ' + cls; $('.msg', el).innerHTML = t; };
@@ -333,13 +336,35 @@ function card(a){
     cd.classList.add('hide');
     chunks = []; rec = new MediaRecorder(stream, { mimeType: FMT[0], audioBitsPerSecond: 128000 });
     rec.ondataavailable = e => e.data.size && chunks.push(e.data);
-    rec.onstop = () => { blob = new Blob(chunks, { type: FMT[0].split(';')[0] }); $('.review audio', el).src = URL.createObjectURL(blob); $('.review', el).classList.remove('hide'); $('.live', el).classList.add('hide'); busy = false; wake?.release?.(); const s = (performance.now() - t0) / 1000; if (s > max) msg(`That take ran ${s.toFixed(1)}s, over the ${max.toFixed(0)}s max. Try a little quicker.`, 'err'); };
+    rec.onstop = () => { blob = new Blob(chunks, { type: FMT[0].split(';')[0] }); $('.ra', el).src = URL.createObjectURL(blob); resetReview(); $('.review', el).classList.remove('hide'); $('.live', el).classList.add('hide'); busy = false; wake?.release?.(); const s = (performance.now() - t0) / 1000; if (s > max) msg(`That take ran ${s.toFixed(1)}s, over the ${max.toFixed(0)}s max. Try a little quicker.`, 'err'); };
     rec.start(250); t0 = performance.now(); playPrompterVideo();
     $('.live', el).classList.remove('hide'); $('.review', el).classList.add('hide');
     const b = $('[data-a=rec]', el); b.textContent = '■ Stop'; b.dataset.a = 'stop';
     tick();
   }
   function stop(){ closePrompter(); cancelAnimationFrame(raf); if (rec?.state === 'recording') rec.stop(); const b = $('[data-a=stop]', el); if (b) { b.textContent = '● Record'; b.dataset.a = 'rec'; } }
+  // Review: the ad (muted) and the take play together from the top. Recording started with the
+  // video, so starting both at 0 reproduces exactly what the reader did.
+  const rv = $('.rv', el), ra = $('.ra', el), pv = $('.pv', el);
+  function resetReview(){ if (!rv) return; if (!rv.dataset.src) { rv.src = a.preview_url; rv.dataset.src = '1'; } rv.pause(); ra.pause(); try { rv.currentTime = 0; } catch {} ra.currentTime = 0; pv.classList.remove('playing'); $('.pvplay', el).textContent = '▶'; }
+  function togglePlay(){
+    if (!rv) return;
+    if (pv.classList.contains('playing')) { rv.pause(); ra.pause(); pv.classList.remove('playing'); $('.pvplay', el).textContent = '▶'; return; }
+    if (rv.ended || ra.ended || rv.currentTime >= (rv.duration || 1e9) - 0.05) { try { rv.currentTime = 0; } catch {} ra.currentTime = 0; }
+    else if (ra.currentTime < (ra.duration || 1e9)) { try { rv.currentTime = ra.currentTime; } catch {} }
+    rv.muted = true; rv.play().catch(() => {});
+    if (!ra.ended && ra.currentTime < (ra.duration || 1e9)) ra.play().catch(() => {});
+    pv.classList.add('playing'); $('.pvplay', el).textContent = '❚❚';
+  }
+  if (rv) {
+    pv.addEventListener('click', togglePlay);
+    // Keep the picture locked to the voice while both run.
+    ra.addEventListener('timeupdate', () => { if (!ra.paused && Math.abs(rv.currentTime - ra.currentTime) > 0.25 && ra.currentTime < (rv.duration || 1e9)) rv.currentTime = ra.currentTime; });
+    // A take that runs past the video holds on the last frame (finalize extends the end card the same way).
+    rv.addEventListener('ended', () => { if (ra.ended || ra.paused) { pv.classList.remove('playing'); $('.pvplay', el).textContent = '↺'; } });
+    ra.addEventListener('ended', () => { if (rv.ended || rv.paused) { pv.classList.remove('playing'); $('.pvplay', el).textContent = '↺'; } });
+  }
+
   async function send(){
     if (!blob) return; const b = $('[data-a=send]', el); b.disabled = true; b.textContent = 'Sending…';
     try {
@@ -358,7 +383,7 @@ function card(a){
     const b = e.target.closest('button'); if (!b) return;
     const act = b.dataset.a;
     if (act === 'rec') start(); else if (act === 'stop') stop(); else if (act === 'send') send();
-    else if (act === 'redo') { $('.review', el).classList.add('hide'); start(); }
+    else if (act === 'redo') { resetReview(); $('.review', el).classList.add('hide'); start(); }
     else if (act === 'guide') {
       const g = $('.guide', el);
       if (!g.firstChild) { const v = document.createElement('video'); v.controls = true; v.playsInline = true; v.src = a.preview_url; g.append(v); v.play().catch(() => {}); b.textContent = 'Hide guide'; }
