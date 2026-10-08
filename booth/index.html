@@ -224,8 +224,9 @@ navigator.permissions?.query({ name: 'microphone' }).then(p => {
 const P = { words: [], ends: [], target: 0, max: 0, last: -1, quiet: 0 };
 // The ad plays muted above the script, starting with the take, so the reader sees what they're
 // voicing. finalize.py starts the voice 0.4 s into the video, which matches the gold word's lead-in.
-function openPrompter(text, target, max, onStop, videoUrl){
+function openPrompter(text, target, max, onStop, videoUrl, posterUrl){
   const v = $('#pVid');
+  v.poster = posterUrl || '';
   if (videoUrl) { if (v.dataset.src !== videoUrl) { v.src = videoUrl; v.dataset.src = videoUrl; } v.muted = true; v.currentTime = 0; v.load?.(); }
   $('#pVidWrap').classList.toggle('hide', !videoUrl);
   $('#prompter').classList.toggle('has-vid', !!videoUrl);
@@ -326,7 +327,7 @@ function card(a){
     }
     try { if (ac.state !== 'running') await ac.resume(); } catch {}
     try { wake = await navigator.wakeLock?.request('screen'); } catch {}
-    openPrompter(a.vo_text, target, max, stop, a.preview_url);
+    openPrompter(a.vo_text, target, max, stop, a.preview_url, a.still_url);
     const cd = $('#count'); cd.classList.remove('hide');
     for (const n of [3, 2, 1]) { cd.textContent = n; await new Promise(r => setTimeout(r, 650)); }
     cd.classList.add('hide');
