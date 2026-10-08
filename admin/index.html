@@ -209,7 +209,10 @@ const legend = (names, colors) => `<div class="legend">${names.map((n,i) => `<sp
 
 async function overview(){
   pane().replaceChildren(h(`<p class="dim">Loading…</p>`));
-  const d = await rpcOrShow('dashboard_summary', { p_days: days, p_tz: C.tz });
+  const [d, lc] = await Promise.all([
+    rpcOrShow('dashboard_summary', { p_days: days, p_tz: C.tz }),
+    sb.rpc('link_click_summary', { p_days: days, p_tz: C.tz }).then(r => r.data, () => null),
+  ]);
   const t = d.totals, s = d.series;
   const revTotal = (Number(t.app_store || 0) + Number(t.admob ?? t.ad_rev_est ?? 0));
   const last = t.last_event_at ? new Date(t.last_event_at) : null;
@@ -239,7 +242,19 @@ async function overview(){
     <div class="two" style="margin-top:12px">
       <div class="card"><h3>Furthest level reached</h3>${d.level_reach.length ? barChart(d.level_reach.map(x => ({day: 'Lv ' + x.level, players: x.players})), ['players'], ['#4FD8FF'], num) : '<p class="small mute">No level data yet.</p>'}<p class="small mute">Where players stop climbing. A cliff = a level to rebalance.</p></div>
       <div class="card"><h3>Top events</h3><div class="tblwrap"><table><tr><th>Event</th><th>Count</th></tr>${d.top_events.map(e => `<tr><td>${esc(e.name)}</td><td>${num(e.count)}</td></tr>`).join('') || '<tr><td class="mute">none yet</td><td></td></tr>'}</table></div></div>
-    </div>`));
+    </div>
+    ${lc ? `<div class="two" style="margin-top:12px">
+      <div class="card"><h3>Download link clicks</h3>
+        <div class="grid k4" style="margin-bottom:8px">
+          ${kpi('Clicks', num(lc.clicks), days + ' days')}
+          ${kpi('People', num(lc.visitors), 'unique visitors')}
+          ${kpi('iPhone', num(lc.by_platform.ios || 0), 'sent to download')}
+          ${kpi('All time', num(lc.all_time), '')}
+        </div>
+        ${lineChart(lc.series, ['clicks'], ['#FFC65C'])}
+        <p class="small mute">gross1234.github.io/rightsteps/get — add <b>?s=name</b> to a link to track it separately (e.g. ?s=tiktok).</p></div>
+      <div class="card"><h3>Clicks by source</h3><div class="tblwrap"><table><tr><th>Source</th><th>Clicks</th><th>People</th></tr>${lc.by_src.map(x => `<tr><td>${esc(x.src)}</td><td>${num(x.clicks)}</td><td>${num(x.visitors)}</td></tr>`).join('') || '<tr><td class="mute">no clicks yet</td><td></td><td></td></tr>'}</table></div></div>
+    </div>` : ''}`));
   $('#rng').onclick = e => { const n = +e.target.dataset?.n; if (n) { days = n; overview(); } };
 }
 const kpi = (l, v, s) => `<div class="card kpi"><div class="l">${esc(l)}</div><div class="v">${esc(v)}</div><div class="s">${esc(s)}</div></div>`;

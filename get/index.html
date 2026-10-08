@@ -33,15 +33,56 @@ var TESTFLIGHT = "https://testflight.apple.com/join/nu6vr3uT";
 // ─────────────────────────────────────────────────────────────────────────
 // Automatic mode: if the app is live on the App Store, go there; otherwise TestFlight.
 var APP_STORE = "https://apps.apple.com/app/id" + APP_STORE_ID;
+var DB = "https://jkdaukqdbzslvcasvzxo.supabase.co", KEY = "sb_publishable_WJurDMhkgkIoFdoM1w7dFA_tuC3XJSn";
 var done = false;
+
+// ── Click tracking (anonymous): where they came from, where we sent them ──
+// Tag a link with ?s=name (e.g. /get/?s=tiktok) to count it separately; otherwise the
+// source is detected from Instagram / Facebook / TikTok in-app browsers or the referrer.
+var ua = navigator.userAgent;
+var platform = /Android/i.test(ua) ? "android" : /iPhone|iPad|iPod/i.test(ua) ? "ios" : "desktop";
+function source() {
+  var tag = new URLSearchParams(location.search).get("s");
+  if (tag) return tag;
+  if (/Instagram/i.test(ua)) return "instagram";
+  if (/FBAN|FBAV|FB_IAB/i.test(ua)) return "facebook";
+  if (/musical_ly|BytedanceWebview|TikTok/i.test(ua)) return "tiktok";
+  var r = document.referrer;
+  if (/instagram\./i.test(r)) return "instagram";
+  if (/facebook\.|fb\.me/i.test(r)) return "facebook";
+  if (/tiktok\./i.test(r)) return "tiktok";
+  return r ? (r.split("/")[2] || "direct").replace(/^www\./, "") : "direct";
+}
+function visitor() {
+  try {
+    var v = localStorage.getItem("rs_visitor");
+    if (!v) { v = crypto.randomUUID(); localStorage.setItem("rs_visitor", v); }
+    return v;
+  } catch (e) { return crypto.randomUUID ? crypto.randomUUID() : null; }
+}
+function track(dest) {
+  try {
+    var body = JSON.stringify({ p_visitor: visitor(), p_src: source(), p_dest: dest, p_platform: platform,
+      p_referrer: document.referrer ? document.referrer.split("/")[2] : null });
+    // keepalive lets the request finish even though we navigate away right after.
+    return fetch(DB + "/rest/v1/rpc/log_link_click", { method: "POST", keepalive: true, body: body,
+      headers: { apikey: KEY, Authorization: "Bearer " + KEY, "Content-Type": "application/json" } }).catch(function () {});
+  } catch (e) { return Promise.resolve(); }
+}
+
 function go(url) {
   if (done) return; done = true;
   document.getElementById("go").href = url;
-  if (/Android/i.test(navigator.userAgent)) {
+  var dest = url === OVERRIDE ? "override" : url === APP_STORE ? "app_store" : "testflight";
+  if (platform === "android") {
+    track("android_notice");
     document.getElementById("msg").textContent = "RightSteps is on iPhone for now. Open this link on an iPhone to download.";
     return;
   }
-  location.replace(url);
+  // Give the click log a moment, but never hold the visitor up for more than 400ms.
+  var t = track(dest), left = false;
+  function leave() { if (!left) { left = true; location.replace(url); } }
+  Promise.resolve(t).then(leave); setTimeout(leave, 400);
 }
 if (OVERRIDE) {
   go(OVERRIDE);
