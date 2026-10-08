@@ -46,6 +46,9 @@ video{border-radius:12px;max-height:60vh;background:#000}
 .prompter .top{display:flex;justify-content:space-between;align-items:center;font-size:14px;color:var(--dim);font-variant-numeric:tabular-nums}
 .prompter .recdot{color:var(--red);font-weight:800}.prompter .recdot::before{content:'';display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--red);margin-right:6px;animation:blink 1s infinite}
 @keyframes blink{50%{opacity:.25}}
+.prompter .pvid{flex:none;display:flex;justify-content:center;margin-top:10px}
+.prompter .pvid video{height:min(34vh,300px);width:auto;aspect-ratio:9/16;max-height:none;margin:0;border-radius:12px;background:#000;object-fit:cover}
+.prompter.has-vid .words{font-size:clamp(26px,7vw,38px);padding-top:12vh}
 .prompter .view{flex:1;overflow:hidden;position:relative;margin:10px 0;mask-image:linear-gradient(transparent,#000 12%,#000 70%,transparent);-webkit-mask-image:linear-gradient(transparent,#000 12%,#000 70%,transparent)}
 .prompter .words{position:absolute;left:0;right:0;top:0;font-size:clamp(30px,8.5vw,46px);line-height:1.32;font-weight:800;letter-spacing:-.4px;transition:transform .35s ease-out;padding:30vh 2px 50vh}
 .prompter .words span{color:#fff;opacity:.9;transition:color .12s,opacity .12s}
@@ -83,6 +86,7 @@ video{border-radius:12px;max-height:60vh;background:#000}
   <div class="top"><span class="recdot">REC</span><span id="pClock">0.0s / ~0s</span></div>
   <div class="meter"><i id="pMeter"></i></div>
   <div class="timebar"><b id="pBar"></b><span class="t" id="pT"></span><span class="m" id="pM"></span></div>
+  <div class="pvid" id="pVidWrap"><video id="pVid" muted playsinline preload="auto"></video></div>
   <div class="view"><div class="words" id="pWords"></div></div>
   <div class="pace" id="pPace"></div>
   <button class="btn rec" id="pStop">■ Stop</button>
@@ -218,11 +222,17 @@ navigator.permissions?.query({ name: 'microphone' }).then(p => {
 
 // ---- teleprompter: the script, big, with the current word lit at the target pace ----
 const P = { words: [], ends: [], target: 0, max: 0, last: -1, quiet: 0 };
-function openPrompter(text, target, max, onStop){
+// The ad plays muted above the script, starting with the take, so the reader sees what they're
+// voicing. finalize.py starts the voice 0.4 s into the video, which matches the gold word's lead-in.
+function openPrompter(text, target, max, onStop, videoUrl){
+  const v = $('#pVid');
+  if (videoUrl) { if (v.dataset.src !== videoUrl) { v.src = videoUrl; v.dataset.src = videoUrl; } v.muted = true; v.currentTime = 0; v.load?.(); }
+  $('#pVidWrap').classList.toggle('hide', !videoUrl);
+  $('#prompter').classList.toggle('has-vid', !!videoUrl);
   const toks = String(text).trim().split(/\s+/);
   // Time per word ∝ its length, plus a beat after commas and full stops (how people actually read).
   const w = toks.map(t => t.replace(/[^\p{L}\p{N}]/gu, '').length + 2 + (/[.!?]$/.test(t) ? 5 : /[,;:—–]$/.test(t) ? 2 : 0));
-  const sum = w.reduce((a, b) => a + b, 0), lead = 0.25, span = Math.max(1, target - lead);
+  const sum = w.reduce((a, b) => a + b, 0), lead = 0.4, span = Math.max(1, target - lead);
   let acc = 0; P.ends = w.map(x => lead + (acc += x) / sum * span);
   P.target = target; P.max = max; P.last = -1; P.quiet = 0;
   $('#pWords').innerHTML = toks.map(t => `<span>${esc(t)}</span> `).join('');
@@ -263,7 +273,8 @@ function prompterLevel(pk){
   $('#pMeter').style.background = pk > 120 ? 'var(--red)' : 'var(--green)';
   P.quiet = pk < 6 ? P.quiet + 1 : 0;   // ~1.5 s of silence at 60 fps
 }
-function closePrompter(){ $('#prompter').classList.add('hide'); P.words = []; }
+function playPrompterVideo(){ const v = $('#pVid'); if (!v.dataset.src) return; try { v.currentTime = 0; } catch {} v.muted = true; v.play().catch(() => {}); }
+function closePrompter(){ $('#prompter').classList.add('hide'); P.words = []; $('#pVid').pause(); }
 
 async function load(){
   if (!T) return $('#hello').innerHTML = '<span class="err">This link is missing its code. Use the full link you were sent.</span>';
@@ -315,14 +326,14 @@ function card(a){
     }
     try { if (ac.state !== 'running') await ac.resume(); } catch {}
     try { wake = await navigator.wakeLock?.request('screen'); } catch {}
-    openPrompter(a.vo_text, target, max, stop);
+    openPrompter(a.vo_text, target, max, stop, a.preview_url);
     const cd = $('#count'); cd.classList.remove('hide');
     for (const n of [3, 2, 1]) { cd.textContent = n; await new Promise(r => setTimeout(r, 650)); }
     cd.classList.add('hide');
     chunks = []; rec = new MediaRecorder(stream, { mimeType: FMT[0], audioBitsPerSecond: 128000 });
     rec.ondataavailable = e => e.data.size && chunks.push(e.data);
     rec.onstop = () => { blob = new Blob(chunks, { type: FMT[0].split(';')[0] }); $('.review audio', el).src = URL.createObjectURL(blob); $('.review', el).classList.remove('hide'); $('.live', el).classList.add('hide'); busy = false; wake?.release?.(); const s = (performance.now() - t0) / 1000; if (s > max) msg(`That take ran ${s.toFixed(1)}s, over the ${max.toFixed(0)}s max. Try a little quicker.`, 'err'); };
-    rec.start(250); t0 = performance.now();
+    rec.start(250); t0 = performance.now(); playPrompterVideo();
     $('.live', el).classList.remove('hide'); $('.review', el).classList.add('hide');
     const b = $('[data-a=rec]', el); b.textContent = '■ Stop'; b.dataset.a = 'stop';
     tick();
