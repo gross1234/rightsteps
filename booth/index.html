@@ -42,7 +42,18 @@ video{border-radius:12px;max-height:60vh;background:#000}
 .ok{color:var(--green)}
 .hide{display:none!important}
 .done-all{text-align:center;padding:28px 16px}
-.sheet{position:fixed;inset:0;background:rgba(7,10,28,.96);z-index:6;overflow-y:auto;padding:28px 18px calc(28px + env(safe-area-inset-bottom))}
+.prompter{position:fixed;inset:0;background:#05071a;z-index:4;display:flex;flex-direction:column;padding:calc(14px + env(safe-area-inset-top)) 18px calc(16px + env(safe-area-inset-bottom))}
+.prompter .top{display:flex;justify-content:space-between;align-items:center;font-size:14px;color:var(--dim);font-variant-numeric:tabular-nums}
+.prompter .recdot{color:var(--red);font-weight:800}.prompter .recdot::before{content:'';display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--red);margin-right:6px;animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.25}}
+.prompter .view{flex:1;overflow:hidden;position:relative;margin:10px 0;mask-image:linear-gradient(transparent,#000 12%,#000 70%,transparent);-webkit-mask-image:linear-gradient(transparent,#000 12%,#000 70%,transparent)}
+.prompter .words{position:absolute;left:0;right:0;top:0;font-size:clamp(30px,8.5vw,46px);line-height:1.32;font-weight:800;letter-spacing:-.4px;transition:transform .35s ease-out;padding:30vh 2px 50vh}
+.prompter .words span{color:#fff;opacity:.9;transition:color .12s,opacity .12s}
+.prompter .words span.past{opacity:.3}
+.prompter .words span.now{color:var(--gold);opacity:1}
+.prompter .pace{font-size:14px;text-align:center;min-height:20px;font-weight:700}
+.prompter .btn{width:100%;margin-top:8px}
+;inset:0;background:rgba(7,10,28,.96);z-index:6;overflow-y:auto;padding:28px 18px calc(28px + env(safe-area-inset-bottom))}
 .sheet .in{max-width:520px;margin:0 auto}
 .sheet .big{font-size:56px;text-align:center;margin:8px 0}
 .sheet h2{font-size:24px;text-align:center;margin:0 0 6px}
@@ -68,6 +79,14 @@ video{border-radius:12px;max-height:60vh;background:#000}
   <div id="list"></div>
 </div>
 <div id="count" class="count hide"></div>
+<div id="prompter" class="prompter hide" aria-live="off">
+  <div class="top"><span class="recdot">REC</span><span id="pClock">0.0s / ~0s</span></div>
+  <div class="meter"><i id="pMeter"></i></div>
+  <div class="timebar"><b id="pBar"></b><span class="t" id="pT"></span><span class="m" id="pM"></span></div>
+  <div class="view"><div class="words" id="pWords"></div></div>
+  <div class="pace" id="pPace"></div>
+  <button class="btn rec" id="pStop">■ Stop</button>
+</div>
 <div id="micHelp" class="sheet hide" role="dialog" aria-modal="true" aria-labelledby="micTitle"><div class="in">
   <div class="big">🎙️</div>
   <h2 id="micTitle">Turn on your microphone</h2>
@@ -197,6 +216,55 @@ navigator.permissions?.query({ name: 'microphone' }).then(p => {
   p.onchange = () => { if (p.state === 'granted' && micWait) retryMic(); };
 }).catch(() => {});
 
+// ---- teleprompter: the script, big, with the current word lit at the target pace ----
+const P = { words: [], ends: [], target: 0, max: 0, last: -1, quiet: 0 };
+function openPrompter(text, target, max, onStop){
+  const toks = String(text).trim().split(/\s+/);
+  // Time per word ∝ its length, plus a beat after commas and full stops (how people actually read).
+  const w = toks.map(t => t.replace(/[^\p{L}\p{N}]/gu, '').length + 2 + (/[.!?]$/.test(t) ? 5 : /[,;:—–]$/.test(t) ? 2 : 0));
+  const sum = w.reduce((a, b) => a + b, 0), lead = 0.25, span = Math.max(1, target - lead);
+  let acc = 0; P.ends = w.map(x => lead + (acc += x) / sum * span);
+  P.target = target; P.max = max; P.last = -1; P.quiet = 0;
+  $('#pWords').innerHTML = toks.map(t => `<span>${esc(t)}</span> `).join('');
+  P.words = [...$('#pWords').children];
+  $('#pWords').style.transform = 'translateY(0)';
+  const scale = max * 1.15;
+  $('#pT').style.left = (target / scale * 100).toFixed(1) + '%'; $('#pM').style.left = (max / scale * 100).toFixed(1) + '%';
+  $('#pBar').style.width = '0'; $('#pClock').textContent = `0.0s / ~${target.toFixed(0)}s`; $('#pPace').textContent = '';
+  $('#pStop').onclick = onStop;
+  $('#prompter').classList.remove('hide');
+  P.words[0]?.classList.add('now'); centerWord(0);
+}
+function centerWord(i){
+  const el = P.words[i]; if (!el) return;
+  const view = $('#prompter .view');
+  $('#pWords').style.transform = `translateY(${-(el.offsetTop - view.clientHeight * 0.38)}px)`;
+}
+function prompterTick(s){
+  if (!P.words.length) return;
+  let i = P.ends.findIndex(e => s < e); if (i < 0) i = P.words.length - 1;
+  if (i !== P.last) {
+    P.words.forEach((w, j) => { w.classList.toggle('past', j < i); w.classList.toggle('now', j === i); });
+    if (P.last < 0 || P.words[i].offsetTop !== P.words[P.last]?.offsetTop) centerWord(i);
+    P.last = i;
+  }
+  const scale = P.max * 1.15;
+  $('#pBar').style.width = Math.min(100, s / scale * 100) + '%';
+  $('#pBar').style.background = s > P.max ? 'var(--red)' : s > P.target ? '#FF8A3D' : 'var(--gold)';
+  $('#pClock').textContent = `${s.toFixed(1)}s / ~${P.target.toFixed(0)}s`;
+  const pace = $('#pPace');
+  if (s > P.max) { pace.textContent = 'Over time. Wrap it up and tap Stop.'; pace.style.color = 'var(--red)'; }
+  else if (s > P.target) { pace.textContent = 'Finish the line, then tap Stop'; pace.style.color = '#FF8A3D'; }
+  else if (P.quiet > 90 && s > 1.5) { pace.textContent = 'Keep going: read the gold word'; pace.style.color = 'var(--gold)'; }
+  else { pace.textContent = 'Read the gold word'; pace.style.color = 'var(--mute)'; }
+}
+function prompterLevel(pk){
+  $('#pMeter').style.width = Math.min(100, pk / 128 * 140) + '%';
+  $('#pMeter').style.background = pk > 120 ? 'var(--red)' : 'var(--green)';
+  P.quiet = pk < 6 ? P.quiet + 1 : 0;   // ~1.5 s of silence at 60 fps
+}
+function closePrompter(){ $('#prompter').classList.add('hide'); P.words = []; }
+
 async function load(){
   if (!T) return $('#hello').innerHTML = '<span class="err">This link is missing its code. Use the full link you were sent.</span>';
   const r = await fetch(FN + '?t=' + encodeURIComponent(T), { headers: hdr });
@@ -233,7 +301,8 @@ function card(a){
     $('.el', el).textContent = s.toFixed(1) + 's';
     $('.timebar b', el).style.width = Math.min(100, s / (max * 1.15) * 100) + '%';
     $('.timebar b', el).style.background = s > max ? 'var(--red)' : s > target ? '#FF8A3D' : 'var(--gold)';
-    if (analyser) { const d = new Uint8Array(analyser.fftSize); analyser.getByteTimeDomainData(d); let pk = 0; for (const v of d) pk = Math.max(pk, Math.abs(v - 128)); $('.meter i', el).style.width = Math.min(100, pk / 128 * 140) + '%'; $('.meter i', el).style.background = pk > 120 ? 'var(--red)' : 'var(--green)'; }
+    if (analyser) { const d = new Uint8Array(analyser.fftSize); analyser.getByteTimeDomainData(d); let pk = 0; for (const v of d) pk = Math.max(pk, Math.abs(v - 128)); prompterLevel(pk); $('.meter i', el).style.width = Math.min(100, pk / 128 * 140) + '%'; $('.meter i', el).style.background = pk > 120 ? 'var(--red)' : 'var(--green)'; }
+    prompterTick(s);
     if (s > max * 1.15) return stop();
     raf = requestAnimationFrame(tick);
   };
@@ -246,6 +315,7 @@ function card(a){
     }
     try { if (ac.state !== 'running') await ac.resume(); } catch {}
     try { wake = await navigator.wakeLock?.request('screen'); } catch {}
+    openPrompter(a.vo_text, target, max, stop);
     const cd = $('#count'); cd.classList.remove('hide');
     for (const n of [3, 2, 1]) { cd.textContent = n; await new Promise(r => setTimeout(r, 650)); }
     cd.classList.add('hide');
@@ -257,7 +327,7 @@ function card(a){
     const b = $('[data-a=rec]', el); b.textContent = '■ Stop'; b.dataset.a = 'stop';
     tick();
   }
-  function stop(){ cancelAnimationFrame(raf); if (rec?.state === 'recording') rec.stop(); const b = $('[data-a=stop]', el); if (b) { b.textContent = '● Record'; b.dataset.a = 'rec'; } }
+  function stop(){ closePrompter(); cancelAnimationFrame(raf); if (rec?.state === 'recording') rec.stop(); const b = $('[data-a=stop]', el); if (b) { b.textContent = '● Record'; b.dataset.a = 'rec'; } }
   async function send(){
     if (!blob) return; const b = $('[data-a=send]', el); b.disabled = true; b.textContent = 'Sending…';
     try {
