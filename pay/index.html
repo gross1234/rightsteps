@@ -80,6 +80,12 @@
   }
   input:focus { outline: 2px solid var(--gold); border-color: transparent; }
   [hidden] { display: none !important; }
+  .methods{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 4px}
+  .method{appearance:none;border:2px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:inherit;
+    font:inherit;font-weight:800;font-size:17px;border-radius:14px;min-height:52px;cursor:pointer}
+  .method.on{border-color:#fff;background:#fff;color:#0b0f26}
+  .method:disabled{opacity:.55;cursor:default}
+  .method .apl{font-family:-apple-system,system-ui;font-size:19px}
 </style>
 </head>
 <body>
@@ -102,6 +108,10 @@
       </ul>
       <div class="plans" id="plans" hidden></div>
       <div class="price" id="price"></div>
+      <div class="methods" id="methods" role="radiogroup" aria-label="Payment method">
+        <button class="method" data-m="apple_pay" id="mApple" role="radio"><span class="apl">&#xF8FF;</span>&nbsp;Pay</button>
+        <button class="method" data-m="card" id="mCard" role="radio">&#x1F4B3;&nbsp;Card</button>
+      </div>
       <button class="btn" id="go"></button>
       <div class="msg" id="err"></div>
       <div id="checkout"></div>
@@ -207,15 +217,25 @@ async function buy() {
   }
   render();
 
+  // Card or Apple Pay. Apple Pay only where the device can actually pay with it.
+  const applePayOK = !!(window.ApplePaySession && ApplePaySession.canMakePayments && ApplePaySession.canMakePayments());
+  let method = q.get('m') === 'card' || !applePayOK ? 'card' : 'apple_pay';
+  if (!applePayOK) $('mApple').hidden = true, $('methods').style.gridTemplateColumns = '1fr';
+  const drawMethods = () => document.querySelectorAll('.method').forEach(b => {
+    b.classList.toggle('on', b.dataset.m === method); b.setAttribute('aria-checked', b.dataset.m === method);
+  });
+  document.querySelectorAll('.method').forEach(b => b.onclick = () => { if (!$('go').disabled) { method = b.dataset.m; drawMethods(); } });
+  drawMethods();
+
   const stripe = Stripe(publishableKey);
   $('go').onclick = async () => {
     $('go').disabled = true; $('err').className = 'msg';
     try {
       const checkout = await stripe.initEmbeddedCheckout({
-        fetchClientSecret: async () => (await call('pay', { action: 'checkout', install, product: it.id })).clientSecret,
+        fetchClientSecret: async () => (await call('pay', { action: 'checkout', install, product: it.id, method })).clientSecret,
       });
       $('go').hidden = true;
-      for (const b of document.querySelectorAll('.plan')) b.disabled = true;
+      for (const b of document.querySelectorAll('.plan, .method')) b.disabled = true;
       $('checkout').classList.add('on');
       checkout.mount('#checkout');
       $('checkout').scrollIntoView({ behavior: 'smooth', block: 'start' });
