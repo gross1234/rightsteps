@@ -232,7 +232,7 @@ async function buy() {
     $('go').disabled = true; $('err').className = 'msg';
     try {
       const checkout = await stripe.initEmbeddedCheckout({
-        fetchClientSecret: async () => (await call('pay', { action: 'checkout', install, product: it.id, method })).clientSecret,
+        fetchClientSecret: async () => (await call('pay', { action: 'checkout', install, product: it.id, method, play_token: q.get('g') || undefined })).clientSecret,
       });
       $('go').hidden = true;
       for (const b of document.querySelectorAll('.plan, .method')) b.disabled = true;
