@@ -42,6 +42,9 @@ video{border-radius:12px;max-height:60vh;background:#000}
 .ok{color:var(--green)}
 .hide{display:none!important}
 .done-all{text-align:center;padding:28px 16px}
+.more .row .btn{flex:1}.more .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--gold);border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.card.new{animation:pop .6s ease-out}@keyframes pop{from{box-shadow:0 0 0 3px var(--gold)}}
 .prompter{position:fixed;inset:0;background:#05071a;z-index:4;display:flex;flex-direction:column;padding:calc(14px + env(safe-area-inset-top)) 18px calc(16px + env(safe-area-inset-bottom))}
 .prompter .top{display:flex;justify-content:space-between;align-items:center;font-size:14px;color:var(--dim);font-variant-numeric:tabular-nums}
 .prompter .recdot{color:var(--red);font-weight:800}.prompter .recdot::before{content:'';display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--red);margin-right:6px;animation:blink 1s infinite}
@@ -56,7 +59,11 @@ video{border-radius:12px;max-height:60vh;background:#000}
 .prompter .words span.now{color:var(--gold);opacity:1}
 .prompter .pace{font-size:14px;text-align:center;min-height:20px;font-weight:700}
 .prompter .btn{width:100%;margin-top:8px;flex:none;min-height:56px}
-;inset:0;background:rgba(7,10,28,.96);z-index:6;overflow-y:auto;padding:28px 18px calc(28px + env(safe-area-inset-bottom))}
+.pv{position:relative;margin-top:10px;cursor:pointer}.pv video{margin:0;display:block}
+.pvplay{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:72px;height:72px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:28px;font-weight:900;cursor:pointer;transition:opacity .2s}
+.pv.playing .pvplay{opacity:0}
+.pvnote{font-size:13px;color:var(--mute);text-align:center;margin-top:6px}
+.sheet{position:fixed;inset:0;background:rgba(7,10,28,.96);z-index:6;overflow-y:auto;padding:28px 18px calc(28px + env(safe-area-inset-bottom))}
 .sheet .in{max-width:520px;margin:0 auto}
 .sheet .big{font-size:56px;text-align:center;margin:8px 0}
 .sheet h2{font-size:24px;text-align:center;margin:0 0 6px}
@@ -82,6 +89,12 @@ video{border-radius:12px;max-height:60vh;background:#000}
   <div class="card hide" id="paceCard" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
     <div><b>Reading speed</b><div class="small dim">Sets the gold word, the "aim for" times and the Guide.</div></div>
     <div style="display:flex;align-items:center;gap:6px;flex:none"><button class="btn" id="paceDn" aria-label="Slower" style="min-width:48px">−</button><b id="paceVal" style="min-width:48px;text-align:center">1.0×</b><button class="btn" id="paceUp" aria-label="Faster" style="min-width:48px">+</button></div>
+  </div>
+  <div class="card more hide" id="more">
+    <b id="moreTitle">Want more to record?</b>
+    <div class="small dim" id="moreSub">Ask for extra scripts any time. New ones show up right here in a few minutes.</div>
+    <div class="row" id="moreBtns"><button class="btn" data-n="1">+1 script</button><button class="btn" data-n="3">+3 scripts</button><button class="btn pri" data-n="5">+5 scripts</button></div>
+    <div class="small" id="moreMsg"></div>
   </div>
   <div id="list"></div>
 </div>
@@ -116,6 +129,8 @@ const sb = supabase.createClient(C.url, C.key, { auth: { persistSession: false }
 const T = new URLSearchParams(location.search).get('t') || '';
 const FN = C.url + '/functions/v1/booth';
 const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+let NAME = '';
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const hdr = { apikey: C.key, Authorization: 'Bearer ' + C.key, 'Content-Type': 'application/json' };
 
@@ -295,20 +310,71 @@ async function load(){
   const r = await fetch(FN + '?t=' + encodeURIComponent(T), { headers: hdr });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) return $('#hello').innerHTML = `<span class="err">${esc(j.error || 'Could not load scripts.')}</span>`;
-  PACE = Number(j.reader.pace) || 1; paceLabel();
+  PACE = Number(j.reader.pace) || 1; paceLabel(); NAME = j.reader.name.split(' ')[0];
   $('#paceCard').classList.remove('hide');
   $('#paceDn').onclick = () => setPace(-0.1); $('#paceUp').onclick = () => setPace(0.1);
-  const todo = j.ads.filter(a => a.status === 'ready').length;
-  $('#hello').innerHTML = `Hi ${esc(j.reader.name.split(' ')[0])}! ${todo ? `<b>${todo}</b> script${todo > 1 ? 's' : ''} to record.` : 'You\'re all caught up. 🎉'}`;
+  const list = $('#list'); list.innerHTML = ''; shown.clear();
+  if (!j.ads.length) list.innerHTML = '<div class="card done-all" id="empty"><b>Nothing to record right now.</b><p class="dim small">New scripts arrive every morning, or ask for more above.</p></div>';
+  for (const a of j.ads) addCard(a);
+  hello();
   if (!FMT) $('#hello').innerHTML += '<div class="err">This browser can\'t record audio. Open the link in Safari (iPhone) or Chrome.</div>';
-  const list = $('#list'); list.innerHTML = '';
-  if (!j.ads.length) { list.innerHTML = '<div class="card done-all"><b>Nothing to record right now.</b><p class="dim small">New scripts arrive every morning.</p></div>'; return; }
-  let lastDay = '';
-  for (const a of j.ads) {
-    if (a.day !== lastDay) { lastDay = a.day; list.insertAdjacentHTML('beforeend', `<div class="day">${esc(new Date(a.day + 'T12:00').toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }))}</div>`); }
-    list.append(card(a));
-  }
+  moreState(j.request);
 }
+function hello(){
+  const todo = $$('#list .card[data-status=ready]').length;
+  $('#hello').innerHTML = `Hi ${esc(NAME)}! ${todo ? `<b>${todo}</b> script${todo > 1 ? 's' : ''} to record.` : 'You\'re all caught up. 🎉'}`;
+}
+// Cards are grouped by day, newest day first; scripts the studio adds later slot into their day.
+const shown = new Set();
+function addCard(a, fresh){
+  if (shown.has(a.id)) return; shown.add(a.id);
+  $('#empty')?.remove();
+  const list = $('#list'), el = card(a);
+  el.dataset.day = a.day; el.dataset.status = a.status;
+  if (fresh) el.classList.add('new');
+  const same = [...list.querySelectorAll(`.card[data-day="${a.day}"]`)];
+  if (same.length) { same[same.length - 1].after(el); return; }
+  const head = document.createElement('div'); head.className = 'day'; head.dataset.day = a.day;
+  head.textContent = new Date(a.day + 'T12:00').toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+  const later = [...list.querySelectorAll('.day')].find(h => h.dataset.day < a.day);
+  if (later) { later.before(head); head.after(el); } else { list.append(head, el); }
+}
+
+// ---- "Want more to record?": the studio renders extras in a few minutes; poll until they land ----
+let moreTimer = 0;
+function moreState(r){
+  $('#more').classList.remove('hide');
+  const working = r && ['pending', 'working'].includes(r.status);
+  $$('#moreBtns button').forEach(b => b.disabled = !!working || !FMT);
+  clearTimeout(moreTimer);
+  if (working) {
+    const made = (r.made || []).length;
+    $('#moreMsg').className = 'small';
+    $('#moreMsg').innerHTML = `<span class="spin"></span>Making ${r.count} new script${r.count > 1 ? 's' : ''}${made ? ` (${made} ready)` : ''}… They'll pop in below, about a minute each. You can keep recording meanwhile.`;
+    moreTimer = setTimeout(poll, 15000);
+  } else if (r?.status === 'done') { $('#moreMsg').className = 'small ok'; $('#moreMsg').textContent = `✓ ${r.made.length} new script${r.made.length === 1 ? '' : 's'} added below.`; }
+  else if (r?.status === 'failed') { $('#moreMsg').className = 'small err'; $('#moreMsg').textContent = (r.made?.length ? `Made ${r.made.length}, then hit a snag. ` : 'The studio hit a snag. ') + 'Try again in a bit.'; }
+  else $('#moreMsg').textContent = '';
+}
+async function poll(){
+  try {
+    const r = await fetch(FN + '?t=' + encodeURIComponent(T), { headers: hdr }); if (!r.ok) throw 0;
+    const j = await r.json();
+    const fresh = j.ads.filter(a => a.status === 'ready' && !shown.has(a.id));
+    fresh.forEach(a => addCard(a, true)); if (fresh.length) hello();
+    moreState(j.request);
+  } catch { moreTimer = setTimeout(poll, 30000); }
+}
+$('#moreBtns').addEventListener('click', async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  $$('#moreBtns button').forEach(x => x.disabled = true);
+  $('#moreMsg').className = 'small'; $('#moreMsg').textContent = 'Asking the studio…';
+  try {
+    const r = await fetch(FN, { method: 'POST', headers: hdr, body: JSON.stringify({ t: T, action: 'more', count: Number(b.dataset.n) }) });
+    const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Could not ask for more.');
+    moreState(j.request);
+  } catch (err) { $('#moreMsg').className = 'small err'; $('#moreMsg').textContent = err.message; $$('#moreBtns button').forEach(x => x.disabled = false); }
+});
 
 function card(a){
   const el = document.createElement('div'); el.className = 'card';
@@ -392,7 +458,7 @@ function card(a){
       if (up.error) throw up.error;
       const r2 = await fetch(FN, { method: 'POST', headers: hdr, body: JSON.stringify({ t: T, ad_id: a.id, path: j1.path, action: 'submit' }) });
       const j2 = await r2.json(); if (!r2.ok) throw new Error(j2.error);
-      $('.pill', el).textContent = 'Sent ✓'; $('.pill', el).classList.add('done');
+      $('.pill', el).textContent = 'Sent ✓'; $('.pill', el).classList.add('done'); el.dataset.status = 'recorded'; hello();
       msg('Sent! Thank you. You can re-record and send again if you want to replace it.', 'ok');
       b.textContent = 'Sent ✓';
     } catch (e) { msg('Upload failed: ' + esc(e.message || e) + '. Check your connection and tap Send again.', 'err'); b.disabled = false; b.textContent = 'Send this take'; }
