@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#070A1C">
+<meta name="robots" content="noindex">
+<title>RightSteps Checkout</title>
+<script src="https://js.stripe.com/v3/"></script>
+<style>
+  :root {
+    --bg-top: #141A3A; --bg-bottom: #070A1C; --tile: #1E2756; --tile-border: #2E3A7A;
+    --gold: #FFC65C; --gold-deep: #6E4A00; --gold-dark: #3A2E10; --add: #34D399;
+    --text: #FFFFFF; --muted: rgba(255,255,255,.66); --faint: rgba(255,255,255,.4); --danger: #EF4444;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background: linear-gradient(180deg, var(--bg-top), var(--bg-bottom)) fixed;
+    color: var(--text);
+    font-family: ui-rounded, "SF Pro Rounded", -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+    padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+  }
+  main { max-width: 460px; margin: 0 auto; }
+  .top { display: flex; align-items: center; gap: 10px; margin: 4px 0 18px; }
+  .logo { width: 40px; height: 40px; border-radius: 11px; background: url("../shared/icon.png") center/cover, var(--tile); }
+  .top b { font-size: 20px; font-weight: 800; letter-spacing: .2px; }
+  .top span { display: block; font-size: 12px; color: var(--muted); }
+  .card {
+    background: var(--tile); border: 2px solid var(--tile-border); border-radius: 22px; padding: 16px;
+  }
+  .card.premium {
+    background: linear-gradient(135deg, var(--gold-dark), var(--gold-deep));
+    border-color: var(--gold); box-shadow: 0 0 24px rgba(255,198,92,.35);
+  }
+  .row { display: flex; align-items: center; gap: 10px; }
+  .emoji { font-size: 32px; line-height: 1; }
+  h1 { font-size: 21px; font-weight: 900; margin: 0; }
+  .premium h1 { color: var(--gold); }
+  .sub { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
+  .price { font-size: 26px; font-weight: 900; color: var(--gold); margin-top: 10px; }
+  .features { list-style: none; padding: 0; margin: 12px 0 4px; }
+  .features li { display: flex; gap: 8px; font-size: 14px; padding: 3px 0; }
+  .features li i { font-style: normal; width: 22px; }
+  .plans { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .plan {
+    text-align: left; color: var(--text); font: inherit; cursor: pointer;
+    background: rgba(0,0,0,.25); border: 1px solid rgba(255,255,255,.24); border-radius: 16px; padding: 10px;
+  }
+  .plan[aria-pressed="true"] { background: rgba(255,198,92,.18); border: 2px solid var(--gold); padding: 9px; }
+  .plan b { font-size: 15px; font-weight: 800; }
+  .plan .badge { float: right; background: var(--add); color: #000; font-size: 9px; font-weight: 900; border-radius: 6px; padding: 2px 6px; }
+  .plan .p { display: block; color: var(--gold); font-weight: 800; font-size: 14px; margin-top: 4px; }
+  .plan small { display: block; color: var(--muted); font-size: 11px; }
+  .plan .trial { color: var(--add); }
+  .btn {
+    display: block; width: 100%; margin-top: 14px; border: 0; cursor: pointer; text-decoration: none; text-align: center;
+    background: linear-gradient(180deg, #FFD36B, #FF8A3D); color: #3A1A00; border-radius: 18px;
+    font: inherit; font-size: 18px; font-weight: 900; padding: 16px 12px; box-shadow: 0 6px 0 #B5520F;
+  }
+  .btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #B5520F; }
+  .btn[disabled] { opacity: .6; }
+  .btn small { display: block; font-size: 12px; font-weight: 700; opacity: .8; }
+  .btn.ghost { background: transparent; color: var(--text); border: 1px solid rgba(255,255,255,.3); box-shadow: none; font-size: 15px; padding: 12px; }
+  .fine { color: var(--faint); font-size: 11px; text-align: center; line-height: 1.45; margin: 12px 4px 0; }
+  .fine a { color: var(--muted); }
+  #checkout { margin-top: 14px; border-radius: 18px; overflow: hidden; background: #fff; display: none; }
+  #checkout.on { display: block; min-height: 420px; }
+  .msg { margin-top: 12px; padding: 10px 12px; border-radius: 12px; font-size: 14px; display: none; }
+  .msg.err { display: block; background: rgba(239,68,68,.15); border: 1px solid var(--danger); }
+  .center { text-align: center; }
+  .big-emoji { font-size: 64px; margin: 8px 0; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 4px; }
+  input {
+    width: 100%; font: inherit; font-size: 16px; color: var(--text); background: rgba(0,0,0,.3);
+    border: 1px solid var(--tile-border); border-radius: 12px; padding: 12px;
+  }
+  input:focus { outline: 2px solid var(--gold); border-color: transparent; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div class="top"><div class="logo"></div><div><b>RightSteps</b><span>Secure checkout</span></div></div>
+
+  <!-- Buy -->
+  <section id="buy" hidden>
+    <div class="card" id="buyCard">
+      <div class="row"><div class="emoji" id="emoji"></div><div><h1 id="title"></h1></div></div>
+      <p class="sub" id="subtitle"></p>
+      <ul class="features" id="features" hidden>
+        <li><i>♾️</i>Unlimited Daily tries, every one counts</li>
+        <li><i>🚫</i>No ads, ever</li>
+        <li><i>❤️</i>Unlimited lives</li>
+        <li><i>🎓</i>All 10 Learn lessons</li>
+        <li><i>🎁</i>Daily gift: +1 Hint, +1 Shield, +50 coins</li>
+        <li><i>🌠</i>Exclusive Aurora skin</li>
+        <li><i>👑</i>Premium badge on your profile</li>
+      </ul>
+      <div class="plans" id="plans" hidden></div>
+      <div class="price" id="price"></div>
+      <button class="btn" id="go"></button>
+      <div class="msg" id="err"></div>
+      <div id="checkout"></div>
+      <p class="fine" id="fine"></p>
+    </div>
+  </section>
+
+  <!-- Done -->
+  <section id="done" class="card center" hidden>
+    <div class="big-emoji" id="doneEmoji">🎉</div>
+    <h1 id="doneTitle">You're all set</h1>
+    <p class="sub" id="doneSub">Head back to RightSteps. Your purchase is waiting for you.</p>
+    <a class="btn" href="rightsteps://paid">Back to RightSteps</a>
+    <p class="fine">A receipt is on its way to your email. Keep it: its receipt number lets you restore on a new phone.</p>
+  </section>
+
+  <!-- Restore -->
+  <section id="restore" class="card" hidden>
+    <div class="row"><div class="emoji">🔁</div><h1>Restore purchases</h1></div>
+    <p class="sub">Use the email you paid with and the receipt (or invoice) number from any RightSteps receipt email.</p>
+    <form id="restoreForm">
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="email" required>
+      <label for="receipt">Receipt or invoice number</label>
+      <input id="receipt" autocapitalize="characters" placeholder="e.g. 1234-5678 or ABC123-0001" required>
+      <button class="btn" type="submit" id="restoreGo">Restore</button>
+    </form>
+    <div class="msg" id="restoreErr"></div>
+  </section>
+
+  <!-- Opened without the app / back from portal -->
+  <section id="open" class="card center" hidden>
+    <div class="big-emoji">👟</div>
+    <h1 id="openTitle">Open RightSteps</h1>
+    <p class="sub" id="openSub">Purchases start from the Shop inside the RightSteps app.</p>
+    <a class="btn" href="rightsteps://paid">Open RightSteps</a>
+  </section>
+</main>
+
+<script>
+const FN = 'https://jkdaukqdbzslvcasvzxo.supabase.co/functions/v1/';
+const KEY = 'sb_publishable_WJurDMhkgkIoFdoM1w7dFA_tuC3XJSn';
+const q = new URLSearchParams(location.search);
+const install = q.get('i');
+const $ = (id) => document.getElementById(id);
+const money = (c) => '$' + (c / 100).toFixed(2);
+const show = (id) => $(id).hidden = false;
+
+async function call(fn, body) {
+  const r = await fetch(FN + fn, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: KEY },
+    body: JSON.stringify(body),
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'Something went wrong. Try again.');
+  return j;
+}
+function fail(el, e) { el.textContent = e.message || String(e); el.className = 'msg err'; }
+
+async function buy() {
+  const { items, publishableKey } = await call('pay', { action: 'catalog' });
+  const byId = Object.fromEntries(items.map((i) => [i.id, i]));
+  let it = byId[q.get('p')];
+  if (!install || !it) { show('open'); return; }
+  const isPremium = !!it.interval;
+  show('buy');
+
+  const render = () => {
+    $('emoji').textContent = it.emoji;
+    $('title').textContent = isPremium ? 'RightSteps Premium' : it.title;
+    $('subtitle').textContent = isPremium ? '' : it.subtitle;
+    $('subtitle').hidden = isPremium;
+    const per = it.interval === 'year' ? 'year' : 'month';
+    $('price').textContent = isPremium ? '' : money(it.cents);
+    $('price').hidden = isPremium;
+    $('go').innerHTML = isPremium && it.trialDays
+      ? `Start ${it.trialDays}-day free trial<small>then ${money(it.cents)}/${per}</small>`
+      : isPremium ? `Subscribe • ${money(it.cents)}/${per}` : `Pay ${money(it.cents)}`;
+    $('fine').innerHTML = (isPremium
+      ? `${it.trialDays ? `Free for ${it.trialDays} days, then ` : ''}${money(it.cents)} per ${per}, charged to your card. Renews automatically until you cancel. Cancel anytime from Profile → Premium in the app; you keep Premium until the end of the paid period. `
+      : 'One-time purchase, charged to your card. ') +
+      'Sold by Sort Inc. (Convivial Concierge), processed by Stripe. Your receipt comes from Sort and your card statement shows SORT INC. <a href="../terms.html">Terms of Use</a> • <a href="../privacy.html">Privacy Policy</a>';
+    for (const b of document.querySelectorAll('.plan')) b.setAttribute('aria-pressed', String(b.dataset.id === it.id));
+  };
+
+  if (isPremium) {
+    $('buyCard').classList.add('premium');
+    $('features').hidden = false;
+    $('plans').hidden = false;
+    for (const id of ['timesup.premium.yearly', 'timesup.premium.monthly']) {
+      const p = byId[id];
+      const yearly = p.interval === 'year';
+      const b = document.createElement('button');
+      b.className = 'plan'; b.dataset.id = id;
+      b.innerHTML = `${p.badge ? `<span class="badge">${p.badge}</span>` : ''}<b>${yearly ? 'Yearly' : 'Monthly'}</b>
+        <span class="p">${money(p.cents)}/${yearly ? 'year' : 'month'}</span>
+        <small>${yearly ? money(Math.round(p.cents / 12)) + '/mo' : 'cancel anytime'}</small>
+        ${p.trialDays ? `<small class="trial">${p.trialDays}-day free trial</small>` : ''}`;
+      b.onclick = () => { if (!$('go').disabled) { it = p; render(); } };
+      $('plans').appendChild(b);
+    }
+  }
+  render();
+
+  const stripe = Stripe(publishableKey);
+  $('go').onclick = async () => {
+    $('go').disabled = true; $('err').className = 'msg';
+    try {
+      const checkout = await stripe.initEmbeddedCheckout({
+        fetchClientSecret: async () => (await call('pay', { action: 'checkout', install, product: it.id })).clientSecret,
+      });
+      $('go').hidden = true;
+      for (const b of document.querySelectorAll('.plan')) b.disabled = true;
+      $('checkout').classList.add('on');
+      checkout.mount('#checkout');
+      $('checkout').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (e) {
+      $('go').disabled = false; fail($('err'), e);
+    }
+  };
+}
+
+async function done() {
+  show('done');
+  try {
+    const s = await call('pay', { action: 'session', id: q.get('done') });
+    if (s.status !== 'complete') {
+      $('doneEmoji').textContent = '⏳'; $('doneTitle').textContent = 'Payment not finished';
+      $('doneSub').textContent = 'Nothing was charged. Go back to the app and try again.';
+    } else if ((s.product || '').startsWith('timesup.premium')) {
+      $('doneEmoji').textContent = '👑'; $('doneTitle').textContent = 'Welcome to Premium';
+    }
+  } catch { /* keep the generic message */ }
+}
+
+function restore() {
+  if (!install) { show('open'); return; }
+  show('restore');
+  $('restoreForm').onsubmit = async (ev) => {
+    ev.preventDefault();
+    $('restoreGo').disabled = true; $('restoreErr').className = 'msg';
+    try {
+      await call('restore', { install, email: $('email').value, receipt: $('receipt').value });
+      $('restore').hidden = true;
+      $('doneEmoji').textContent = '✅'; $('doneTitle').textContent = 'Purchases restored';
+      $('doneSub').textContent = 'Go back to RightSteps to pick them up.';
+      show('done');
+    } catch (e) { fail($('restoreErr'), e); $('restoreGo').disabled = false; }
+  };
+}
+
+if (q.get('done')) done();
+else if (q.get('restore')) restore();
+else if (q.get('back')) { $('openTitle').textContent = 'All done'; $('openSub').textContent = 'Changes are saved. Head back to the game.'; show('open'); }
+else buy().catch((e) => { show('buy'); fail($('err'), e); $('go').hidden = true; });
+</script>
+</body>
+</html>
