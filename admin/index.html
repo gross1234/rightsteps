@@ -419,7 +419,36 @@ async function settings(){
   const { data: st } = await sb.from('settings').select('key,value').eq('key', 'studio').maybeSingle();
   const s = st?.value || {};
   const { data: f } = await sb.auth.mfa.listFactors();
+  const { data: soc } = await sb.from('settings').select('value').eq('key', 'social').maybeSingle();
+  const so = { autopost: true, instagram: true, tiktok_drafts: true, window_start: 9, window_end: 21, gap_minutes: 150, ...(soc?.value || {}) };
+  const { data: igs } = await sb.functions.invoke('instagram', { body: { action: 'status' } });
+  const ig = igs || {};
   pane().replaceChildren(h(`
+    <div class="card" style="margin-bottom:12px"><h3>Social posting</h3>
+      <p class="small dim">When your reader has voiced all five of the day's ads, the studio Mac posts them automatically: Instagram reels one at a time, spaced out through the day, and the whole set to your TikTok drafts (TikTok only allows full auto-posting after its app review).</p>
+      <label style="display:flex;gap:8px;align-items:center;color:var(--text)"><input type="checkbox" id="soAuto" style="width:auto" ${so.autopost ? 'checked' : ''}> Auto-post every day</label>
+      <div class="two" style="margin-top:4px">
+        <div><label>Instagram: hours between reels</label><input id="soGap" type="number" min="0.5" max="12" step="0.5" value="${esc(so.gap_minutes / 60)}"></div>
+        <div><label>Post between (local time)</label><div style="display:flex;gap:6px;align-items:center"><input id="soFrom" type="number" min="0" max="23" value="${esc(so.window_start)}"> <span class="dim">to</span> <input id="soTo" type="number" min="1" max="24" value="${esc(so.window_end)}"></div></div>
+      </div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px">
+        <label style="display:flex;gap:8px;align-items:center;margin:0"><input type="checkbox" id="soIg" style="width:auto" ${so.instagram ? 'checked' : ''}> Instagram</label>
+        <label style="display:flex;gap:8px;align-items:center;margin:0"><input type="checkbox" id="soTt" style="width:auto" ${so.tiktok_drafts ? 'checked' : ''}> TikTok drafts</label>
+      </div>
+      <button class="btn sm" id="soSave" style="margin-top:10px">Save</button>
+      <hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
+      ${ig.connected ? `<p class="ok small">Instagram connected: @${esc(ig.username || '')} · token renews automatically (now valid to ${esc((ig.expires_at || '').slice(0, 10))})</p>` : `
+      <p class="small"><b>Connect Instagram</b> (one time)</p>
+      <ol class="small dim">
+        <li>Open your app at <a target="_blank" rel="noopener" href="https://developers.facebook.com/apps/">developers.facebook.com/apps</a> → <b>RightSteps Poster</b> → <b>Instagram</b> → <b>API setup with Instagram login</b>.</li>
+        <li>Under <b>Set up Instagram business login</b>, add this redirect URL: <span class="mono">${esc(C.adminUrl)}</span></li>
+        <li>Copy the <b>Instagram app ID</b> and <b>Instagram app secret</b> from that page into the boxes below, Save, then Connect and log in as <b>@rightsteps_mobileapp</b>.</li>
+      </ol>
+      <label>Instagram app ID</label><input id="igId">
+      <label>Instagram app secret</label><input id="igSec" type="password" placeholder="${ig.has_app ? 'saved — leave blank to keep' : ''}">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn sm" id="igSave">Save</button><button class="btn sm pri" id="igConnect">Connect Instagram</button></div>`}
+      <div class="err" id="igMsg"></div>
+    </div>
     <div class="two">
       <div class="card"><h3>Ad studio</h3>
         <label>Ads per day</label><input id="apd" type="number" min="1" max="10" value="${esc(s.ads_per_day ?? 5)}">
@@ -432,6 +461,25 @@ async function settings(){
         <button class="btn sm" id="add2">Add a backup authenticator</button>
         <p class="small mute">Add a second device so losing your phone doesn't lock you out.</p></div>
     </div>`));
+  $('#soSave').onclick = async () => {
+    const v = { ...so, autopost: $('#soAuto').checked, instagram: $('#soIg').checked, tiktok_drafts: $('#soTt').checked,
+      gap_minutes: Math.round(Number($('#soGap').value || 2.5) * 60), window_start: +$('#soFrom').value, window_end: +$('#soTo').value };
+    const { error } = await sb.from('settings').upsert({ key: 'social', value: v, updated_at: new Date().toISOString() });
+    toast(error ? error.message : 'Saved');
+  };
+  $('#igSave')?.addEventListener('click', async () => {
+    const { data: cur } = await sb.from('settings').select('value').eq('key', 'instagram').maybeSingle();
+    const v = { ...(cur?.value || {}) };
+    if ($('#igId').value.trim()) v.app_id = $('#igId').value.trim();
+    if ($('#igSec').value.trim()) v.app_secret = $('#igSec').value.trim();
+    const { error } = await sb.from('settings').upsert({ key: 'instagram', value: v, updated_at: new Date().toISOString() });
+    toast(error ? error.message : 'Saved'); if (!error) { $('#igId').value = ''; $('#igSec').value = ''; }
+  });
+  $('#igConnect')?.addEventListener('click', async () => {
+    const { data, error } = await sb.functions.invoke('instagram', { body: { action: 'auth_url', redirect_uri: C.adminUrl } });
+    if (error) return $('#igMsg').textContent = await errText(error);
+    location.href = data.url;
+  });
   $('#sv').onclick = async () => { const { error } = await sb.from('settings').upsert({ key: 'studio', value: { ...s, ads_per_day: +$('#apd').value, cloud_retention_days: +$('#ret').value }, updated_at: new Date().toISOString() }); toast(error ? error.message : 'Saved'); };
   $('#add2').onclick = () => screenEnroll();
 }
@@ -439,7 +487,15 @@ async function settings(){
 // AdMob OAuth return (?code=…&state=…)
 (async () => {
   const q = new URLSearchParams(location.search);
-  if (q.get('code') && q.get('state')) {
+  if (q.get('code') && (q.get('state') || '').startsWith('ig_')) {
+    history.replaceState(null, '', location.pathname + '#tab=settings');
+    const { data: aal } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aal?.currentLevel === 'aal2') {
+      const { data, error } = await sb.functions.invoke('instagram', { body: { action: 'exchange', code: q.get('code'), state: q.get('state'), redirect_uri: C.adminUrl } });
+      toast(error ? 'Instagram: ' + await errText(error) : `Instagram connected: @${data.username || ''}`);
+    }
+    tab = 'settings';
+  } else if (q.get('code') && q.get('state')) {
     history.replaceState(null, '', location.pathname + '#tab=revenue');
     const { data: aal } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
     if (aal?.currentLevel === 'aal2') {
