@@ -336,23 +336,26 @@ async function ads(){
 const STATUS = { ready: 'Waiting for reader', recorded: 'Recorded · finalizing', final: 'Ready to post', skipped: 'Skipped' };
 function adCard(a){
   const el = document.createElement('div'); el.className = 'card ad';
-  const vid = a.final_path || (a.preview_path !== a.placeholder_path ? a.preview_path : null);
-  el.innerHTML = `<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:8px"><b>#${a.idx} ${esc(a.title || a.concept || '')}</b><span class="pill p-${esc(a.status)}">${esc(STATUS[a.status] || a.status)}</span></div>
+  const story = a.format === 'story', img = /\.(jpe?g|png)$/i.test(a.final_path || '');
+  const vid = img ? null : a.final_path || (a.preview_path !== a.placeholder_path ? a.preview_path : null);
+  const plats = story ? ['instagram'] : ['instagram', 'tiktok', 'youtube_shorts'];
+  el.innerHTML = `<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:8px"><b>${story ? 'Story · ' : `#${a.idx} `}${esc(a.title || a.concept || '')}</b><span class="pill p-${esc(a.status)}">${esc(STATUS[a.status] || a.status)}</span></div>
     <div class="media"></div>
     ${a.final_path ? '' : vid ? '<p class="small mute" style="margin:6px 0 0">Music and game sounds only. The voice is added when the reader records.</p>' : '<p class="small mute" style="margin:6px 0 0">Preview coming with the next studio run.</p>'}
-    <p class="vo">“${esc(a.vo_text)}”</p>
+    ${a.vo_text ? `<p class="vo">“${esc(a.vo_text)}”</p>` : story ? '<p class="small mute" style="margin:6px 0 0">Image story: posts to Instagram Stories automatically.</p>' : ''}
     ${a.take_path ? '<div class="take small dim"></div>' : ''}
     <div class="row">
       ${vid ? '<button class="btn sm pri" data-act="share">Share…</button><button class="btn sm" data-act="dl">Download</button>' : ''}
-      <button class="btn sm" data-act="cap" data-p="instagram">IG caption</button>
+      ${story ? '' : `<button class="btn sm" data-act="cap" data-p="instagram">IG caption</button>
       <button class="btn sm" data-act="cap" data-p="tiktok">TikTok caption</button>
-      <button class="btn sm" data-act="cap" data-p="youtube_shorts">Shorts caption</button>
+      <button class="btn sm" data-act="cap" data-p="youtube_shorts">Shorts caption</button>`}
     </div>
-    <div class="row small">${['instagram','tiktok','youtube_shorts'].map(p => `<label style="display:flex;gap:6px;align-items:center;margin:0;color:var(--dim)"><input type="checkbox" data-post="${p}" style="width:auto" ${a.posted?.[p] ? 'checked' : ''}> posted ${p === 'youtube_shorts' ? 'Shorts' : p === 'instagram' ? 'IG' : 'TikTok'}</label>`).join('')}</div>`;
+    <div class="row small">${plats.map(p => `<label style="display:flex;gap:6px;align-items:center;margin:0;color:var(--dim)"><input type="checkbox" data-post="${p}" style="width:auto" ${a.posted?.[p] ? 'checked' : ''}> posted ${p === 'youtube_shorts' ? 'Shorts' : p === 'instagram' ? 'IG' : 'TikTok'}</label>`).join('')}</div>`;
   (async () => {
     const m = $('.media', el);
     const still = await signed('ads', a.still_path);
-    if (vid) { const v = document.createElement('video'); v.controls = true; v.playsInline = true; v.preload = 'none'; if (still) v.poster = still; v.src = await signed('ads', vid); m.append(v); }
+    if (img) { const i = new Image(); i.src = await signed('ads', a.final_path); i.alt = ''; m.append(i); }
+    else if (vid) { const v = document.createElement('video'); v.controls = true; v.playsInline = true; v.preload = 'none'; if (still) v.poster = still; v.src = await signed('ads', vid); m.append(v); }
     else if (still) { const i = new Image(); i.src = still; i.alt = ''; m.append(i); }
     if (a.take_path) { const t = $('.take', el); t.innerHTML = 'Reader take: '; const au = document.createElement('audio'); au.controls = true; au.style.width = '100%'; au.src = await signed('takes', a.take_path); t.append(au); }
   })();
