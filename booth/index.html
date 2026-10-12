@@ -382,7 +382,7 @@ function card(a){
   const max = Number(a.max_seconds || Number(a.target_seconds || 14) + 4);
   const target = Math.min(max, Number(a.target_seconds || 14) / PACE);
   el.innerHTML = `
-    <div class="head"><b>Script ${a.idx}</b><span class="pill ${a.status === 'recorded' ? 'done' : ''}">${a.status === 'recorded' ? 'Sent ✓' : 'To record'}</span></div>
+    <div class="head"><b>${a.format === 'story' ? 'Instagram Story' : `Script ${a.idx}`}</b><span class="pill ${a.status === 'recorded' ? 'done' : ''}">${a.status === 'recorded' ? 'Sent ✓' : 'To record'}</span></div>
     <div class="media">${a.still_url ? `<img src="${esc(a.still_url)}" alt="">` : ''}<div><div class="script">${esc(a.vo_text)}</div>
     ${a.direction ? `<div class="dir">${esc(a.direction)}</div>` : ''}<div class="meta">Aim for ~${target.toFixed(0)}s · max ${max.toFixed(0)}s</div></div></div>
     <div class="guide"></div>
