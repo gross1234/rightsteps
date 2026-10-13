@@ -223,10 +223,11 @@ const legend = (names, colors) => `<div class="legend">${names.map((n,i) => `<sp
 
 async function overview(){
   pane().replaceChildren(h(`<p class="dim">Loading…</p>`));
-  const [d, lc, fb] = await Promise.all([
+  const [d, lc, fb, pp] = await Promise.all([
     rpcOrShow('dashboard_summary', { p_days: days, p_tz: C.tz }),
     sb.rpc('link_click_summary', { p_days: days, p_tz: C.tz }).then(r => r.data, () => null),
     sb.from('feedback').select('created_at,message,email,context,platform,app_version').order('created_at', { ascending: false }).limit(15).then(r => r.data || [], () => []),
+    sb.from('player_profiles').select('install_id,pid,name,emoji,photo_path,photo_ver,hidden,reports,updated_at').order('reports', { ascending: false }).order('updated_at', { ascending: false }).limit(30).then(r => r.data || [], () => []),
   ]);
   const t = d.totals, s = d.series;
   const revTotal = (Number(t.app_store || 0) + Number(t.admob ?? t.ad_rev_est ?? 0));
@@ -272,7 +273,15 @@ async function overview(){
     </div>` : ''}
     <div class="card" style="margin-top:12px"><h3>"How can we do better?" — player feedback</h3>
       <p class="small mute">From the "Enjoying RightSteps?" question after level 3 of Levels and lesson 3 of Learn. "Yes" goes to the store rating page; "No" lands here.</p>
-      <div class="tblwrap"><table><tr><th>When</th><th>Message</th><th>Where</th><th>Email</th></tr>${fb.map(f => `<tr><td class="small">${esc(new Date(f.created_at).toLocaleString())}</td><td>${esc(f.message)}</td><td class="small">${esc((f.context && f.context.section) || '')} · ${esc(f.platform || '')} ${esc(f.app_version || '')}</td><td class="small">${esc(f.email || '')}</td></tr>`).join('') || '<tr><td class="mute">nothing yet</td><td></td><td></td><td></td></tr>'}</table></div></div>`));
+      <div class="tblwrap"><table><tr><th>When</th><th>Message</th><th>Where</th><th>Email</th></tr>${fb.map(f => `<tr><td class="small">${esc(new Date(f.created_at).toLocaleString())}</td><td>${esc(f.message)}</td><td class="small">${esc((f.context && f.context.section) || '')} · ${esc(f.platform || '')} ${esc(f.app_version || '')}</td><td class="small">${esc(f.email || '')}</td></tr>`).join('') || '<tr><td class="mute">nothing yet</td><td></td><td></td><td></td></tr>'}</table></div></div>
+    <div class="card" style="margin-top:12px" id="mod"><h3>Player names &amp; pictures</h3>
+      <p class="small mute">What players show on the Daily leaderboard. Reported ones are listed first. "Hide" replaces their name and picture with "Player ABCD" for everyone (Apple requires a way to act on reports).</p>
+      <div class="tblwrap"><table><tr><th></th><th>Name</th><th>Reports</th><th>Updated</th><th></th></tr>${pp.map(x => `<tr><td>${x.photo_path ? `<img src="${esc(C.url + '/storage/v1/object/public/' + x.photo_path + '?v=' + x.photo_ver)}" style="width:36px;height:36px;border-radius:50%;object-fit:cover">` : esc(x.emoji || '')}</td><td>${esc(x.name || '—')}${x.hidden ? ' <span class="pill p-skipped">hidden</span>' : ''}</td><td>${x.reports ? `<b style="color:var(--gold)">${x.reports}</b>` : '0'}</td><td class="small">${esc(new Date(x.updated_at).toLocaleDateString())}</td><td><button class="btn sm" data-hide="${esc(x.install_id)}" data-v="${x.hidden ? '0' : '1'}">${x.hidden ? 'Unhide' : 'Hide'}</button></td></tr>`).join('') || '<tr><td class="mute">no profiles yet</td><td></td><td></td><td></td><td></td></tr>'}</table></div></div>`));
+  $('#mod').onclick = async e => {
+    const b = e.target.closest('button[data-hide]'); if (!b) return;
+    const { error } = await sb.from('player_profiles').update({ hidden: b.dataset.v === '1' }).eq('install_id', b.dataset.hide);
+    if (error) toast(error.message); else { toast(b.dataset.v === '1' ? 'Hidden' : 'Visible again'); overview(); }
+  };
   $('#rng').onclick = e => { const n = +e.target.dataset?.n; if (n) { days = n; overview(); } };
 }
 const kpi = (l, v, s) => `<div class="card kpi"><div class="l">${esc(l)}</div><div class="v">${esc(v)}</div><div class="s">${esc(s)}</div></div>`;
