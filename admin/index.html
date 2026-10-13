@@ -223,9 +223,10 @@ const legend = (names, colors) => `<div class="legend">${names.map((n,i) => `<sp
 
 async function overview(){
   pane().replaceChildren(h(`<p class="dim">Loading…</p>`));
-  const [d, lc] = await Promise.all([
+  const [d, lc, fb] = await Promise.all([
     rpcOrShow('dashboard_summary', { p_days: days, p_tz: C.tz }),
     sb.rpc('link_click_summary', { p_days: days, p_tz: C.tz }).then(r => r.data, () => null),
+    sb.from('feedback').select('created_at,message,email,context,platform,app_version').order('created_at', { ascending: false }).limit(15).then(r => r.data || [], () => []),
   ]);
   const t = d.totals, s = d.series;
   const revTotal = (Number(t.app_store || 0) + Number(t.admob ?? t.ad_rev_est ?? 0));
@@ -268,7 +269,10 @@ async function overview(){
         ${lineChart(lc.series, ['clicks'], ['#FFC65C'])}
         <p class="small mute">gross1234.github.io/rightsteps/get — add <b>?s=name</b> to a link to track it separately (e.g. ?s=tiktok).</p></div>
       <div class="card"><h3>Clicks by source</h3><div class="tblwrap"><table><tr><th>Source</th><th>Clicks</th><th>People</th></tr>${lc.by_src.map(x => `<tr><td>${esc(x.src)}</td><td>${num(x.clicks)}</td><td>${num(x.visitors)}</td></tr>`).join('') || '<tr><td class="mute">no clicks yet</td><td></td><td></td></tr>'}</table></div></div>
-    </div>` : ''}`));
+    </div>` : ''}
+    <div class="card" style="margin-top:12px"><h3>"How can we do better?" — player feedback</h3>
+      <p class="small mute">From the "Enjoying RightSteps?" question after level 3 of Levels and lesson 3 of Learn. "Yes" goes to the store rating page; "No" lands here.</p>
+      <div class="tblwrap"><table><tr><th>When</th><th>Message</th><th>Where</th><th>Email</th></tr>${fb.map(f => `<tr><td class="small">${esc(new Date(f.created_at).toLocaleString())}</td><td>${esc(f.message)}</td><td class="small">${esc((f.context && f.context.section) || '')} · ${esc(f.platform || '')} ${esc(f.app_version || '')}</td><td class="small">${esc(f.email || '')}</td></tr>`).join('') || '<tr><td class="mute">nothing yet</td><td></td><td></td><td></td></tr>'}</table></div></div>`));
   $('#rng').onclick = e => { const n = +e.target.dataset?.n; if (n) { days = n; overview(); } };
 }
 const kpi = (l, v, s) => `<div class="card kpi"><div class="l">${esc(l)}</div><div class="v">${esc(v)}</div><div class="s">${esc(s)}</div></div>`;
