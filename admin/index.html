@@ -492,7 +492,7 @@ async function settings(){
     </div>
     <div class="two">
       <div class="card"><h3>Ad studio</h3>
-        <label>Ads per day</label><input id="apd" type="number" min="1" max="10" value="${esc(s.ads_per_day ?? 5)}">
+        <label>Ads per reader per day <span class="mute">(each active reader gets their own set)</span></label><input id="apd" type="number" min="1" max="10" value="${esc(s.ads_per_day ?? 5)}">
         <label>Keep videos in the cloud for (days)</label><input id="ret" type="number" min="3" max="60" value="${esc(s.cloud_retention_days ?? 14)}">
         <p class="small mute">Older videos stay on the studio Mac in Downloads → RightSteps Ads. The free cloud tier holds about 1 GB.</p>
         <button class="btn sm" id="sv">Save</button></div>
