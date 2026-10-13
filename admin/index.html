@@ -185,7 +185,7 @@ function screenNewPassword(){
 }
 
 // ---------------- app ----------------
-const TABS = [['overview','Overview'],['revenue','Revenue'],['ads','Ads'],['reader','Reader'],['settings','Settings']];
+const TABS = [['overview','Overview'],['revenue','Revenue'],['ads','Ads'],['reader','Readers'],['settings','Settings']];
 let tab = (location.hash.match(/tab=(\w+)/) || [])[1] || 'overview';
 let days = 30;
 function app(){
@@ -385,49 +385,73 @@ function adCard(a){
   return el;
 }
 
-// ---- reader ----
+// ---- readers ----
 async function reader(){
   pane().replaceChildren(h(`<p class="dim">Loading…</p>`));
-  const [{ data: r }, { data: msgs }, { data: recent }] = await Promise.all([
-    sb.from('readers').select('*').eq('active', true).maybeSingle(),
-    sb.from('messages').select('*').order('created_at', { ascending: false }).limit(20),
-    sb.from('ads').select('status,recorded_at').gte('day', new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10)),
+  const since = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);
+  const [{ data: readers }, { data: msgs }, { data: recent }] = await Promise.all([
+    sb.from('readers').select('*').order('active', { ascending: false }).order('created_at'),
+    sb.from('messages').select('*').order('created_at', { ascending: false }).limit(30),
+    sb.from('ads').select('status,assigned_reader,reader_id').gte('day', since),
   ]);
-  const link = r ? C.boothUrl + '?t=' + r.token : '';
-  const rec = (recent || []).filter(a => a.status !== 'ready').length, tot = (recent || []).length;
-  const msg = r ? `Hi ${r.name.split(' ')[0]}! Today's RightSteps scripts are ready to record (about a minute of reading). Open this on your phone: ${link}` : '';
-  pane().replaceChildren(h(`
+  const list = readers || [];
+  const names = Object.fromEntries(list.map(r => [r.id, r.name]));
+  const active = list.filter(r => r.active), paused = list.filter(r => !r.active);
+  const card = r => {
+    const link = C.boothUrl + '?t=' + r.token;
+    const mine = (recent || []).filter(a => a.assigned_reader === r.id);
+    const done = (recent || []).filter(a => a.reader_id === r.id && a.status !== 'ready').length;
+    const waiting = mine.filter(a => a.status === 'ready').length;
+    const msg = `Hi ${r.name.split(' ')[0]}! Your RightSteps scripts are ready to record. Open this on your phone: ${link}`;
+    return `<div class="card" data-id="${esc(r.id)}"><h3 style="display:flex;justify-content:space-between;gap:8px">${esc(r.name)}<span class="pill ${r.active ? 'p-final' : 'p-skipped'}">${r.active ? 'Active' : 'Paused'}</span></h3>
+      <p class="small dim" style="margin:0">${esc(r.email || 'no email')} · ${esc(r.phone || 'no phone')} · daily message by <b>${esc(r.channel)}</b></p>
+      <p class="small dim">${waiting} waiting · recorded ${done} this week</p>
+      ${r.active ? `<label>Reading speed</label>
+      <select class="pace" style="max-width:220px">${[0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5].map(v => `<option value="${v}" ${Math.abs(Number(r.pace ?? 1) - v) < 0.05 ? 'selected' : ''}>${v.toFixed(1)}× ${v === 1 ? '(2.5 words/s)' : v > 1 ? 'faster' : 'slower'}</option>`).join('')}</select>
+      <label>Booth link (only their scripts)</label><p class="mono">${esc(link)}</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" data-act="cp" data-link="${esc(link)}">Copy link</button>
+      ${r.phone ? `<a class="btn sm" href="sms:${esc(r.phone)}${/iPhone|iPad|Mac/.test(navigator.userAgent) ? '&' : '?'}body=${encodeURIComponent(msg)}">Text it</a>` : ''}
+      ${r.email ? `<a class="btn sm" href="mailto:${esc(r.email)}?subject=${encodeURIComponent('RightSteps scripts to record')}&body=${encodeURIComponent(msg)}">Email it</a>` : ''}
+      <button class="btn sm" data-act="rot">New link</button><button class="btn sm" data-act="pause">Pause</button></div>`
+      : `<div style="display:flex;gap:8px"><button class="btn sm pri" data-act="resume">Resume</button></div>`}
+    </div>`;
+  };
+  pane().replaceChildren(h(`<div id="rd">
+    <p class="small dim">Every active reader gets their own booth link and an even share of the day's scripts. Extra scripts a reader asks for in the booth go to that reader. Pausing someone hands their unrecorded scripts to the others.</p>
+    <div class="ads">${active.map(card).join('') || '<div class="card"><p class="dim">No active readers. Add one and they\'ll get their booth link within a minute, then a message every morning when new scripts are ready.</p></div>'}</div>
     <div class="two">
-      <div class="card"><h3>Assigned reader</h3>
-        ${r ? `<p style="margin:4px 0"><b>${esc(r.name)}</b></p><p class="small dim" style="margin:0">${esc(r.email || 'no email')} · ${esc(r.phone || 'no phone')} · daily message by <b>${esc(r.channel)}</b></p>
-        <p class="small dim">Recorded ${rec} of ${tot} scripts this week.</p>
-        <label>Reading speed <span class="mute">(teleprompter + guide; the reader can also change it in the booth)</span></label>
-        <select id="pace" style="max-width:220px">${[0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5].map(v => `<option value="${v}" ${Math.abs(Number(r.pace ?? 1) - v) < 0.05 ? 'selected' : ''}>${v.toFixed(1)}× ${v === 1 ? '(2.5 words/s)' : v > 1 ? 'faster' : 'slower'}</option>`).join('')}</select>
-        <label>Their booth link (records every ad)</label><p class="mono">${esc(link)}</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" id="cp">Copy link</button>
-        ${r.phone ? `<a class="btn sm" href="sms:${esc(r.phone)}${/iPhone|iPad|Mac/.test(navigator.userAgent) ? '&' : '?'}body=${encodeURIComponent(msg)}">Text it</a>` : ''}
-        ${r.email ? `<a class="btn sm" href="mailto:${esc(r.email)}?subject=${encodeURIComponent('RightSteps scripts to record')}&body=${encodeURIComponent(msg)}">Email it</a>` : ''}
-        <button class="btn sm" id="rot">New link</button></div>
-        <p class="small mute">"New link" turns off the old one, e.g. if it was forwarded.</p>` : '<p class="dim">No reader assigned yet. Add one and they\'ll get their booth link within a minute, then a message every morning when new scripts are ready.</p>'}
-      </div>
-      <div class="card"><h3>${r ? 'Replace reader' : 'Assign a reader'}</h3>
+      <div class="card"><h3>Add a reader</h3>
         <form id="f"><label>Name</label><input id="n" required>
         <label>Email</label><input id="e" type="email">
         <label>Mobile (for iMessage/text)</label><input id="p" type="tel" placeholder="+1…">
         <label>Daily message by</label><select id="ch"><option value="email">Email</option><option value="imessage">iMessage</option><option value="both">Both</option><option value="none">Don't message (I'll send the link)</option></select>
-        <div style="height:12px"></div><button class="btn pri">Assign</button></form>
-        <p class="small mute">One reader voices every ad. Assigning someone new turns off the previous reader's link.</p></div>
+        <div style="height:12px"></div><button class="btn pri">Add reader</button></form>
+        <p class="small mute">Adding someone doesn't affect the other readers. "New link" turns off only that reader's old link.</p></div>
+      ${paused.length ? `<div><h3 style="margin:8px 0">Paused</h3>${paused.map(card).join('')}</div>` : ''}
     </div>
     <h2>Daily messages</h2>
-    <div class="card tblwrap"><table><tr><th>Day</th><th>To</th><th>Via</th><th>Status</th></tr>${(msgs || []).map(m => `<tr><td>${esc(m.day)}</td><td>${esc(m.to_addr || '')}</td><td>${esc(m.channel)}</td><td>${esc(m.status)}</td></tr>`).join('') || '<tr><td class="mute">none yet</td><td></td><td></td><td></td></tr>'}</table></div>`));
-  $('#cp')?.addEventListener('click', () => copy(link));
-  $('#pace')?.addEventListener('change', async e => { const { error } = await sb.from('readers').update({ pace: Number(e.target.value) }).eq('id', r.id); toast(error ? error.message : 'Reading speed saved'); });
-  $('#rot')?.addEventListener('click', async () => { if (!confirm('Turn off the current link and make a new one?')) return; const { error } = await sb.rpc('rotate_reader_link'); if (error) toast(error.message); else reader(); });
+    <div class="card tblwrap"><table><tr><th>Day</th><th>Reader</th><th>To</th><th>Via</th><th>Status</th></tr>${(msgs || []).map(m => `<tr><td>${esc(m.day)}</td><td>${esc(names[m.reader_id] || '')}</td><td>${esc(m.to_addr || '')}</td><td>${esc(m.channel)}</td><td>${esc(m.status)}</td></tr>`).join('') || '<tr><td class="mute">none yet</td><td></td><td></td><td></td><td></td></tr>'}</table></div></div>`));
+  $('#rd').addEventListener('change', async e => {
+    if (!e.target.classList.contains('pace')) return;
+    const id = e.target.closest('[data-id]').dataset.id;
+    const { error } = await sb.from('readers').update({ pace: Number(e.target.value) }).eq('id', id); toast(error ? error.message : 'Reading speed saved');
+  });
+  $('#rd').addEventListener('click', async e => {
+    const b = e.target.closest('button[data-act]'); if (!b) return;
+    const id = b.closest('[data-id]').dataset.id, name = names[id];
+    if (b.dataset.act === 'cp') return copy(b.dataset.link);
+    if (b.dataset.act === 'rot') { if (!confirm(`Turn off ${name}'s current link and make a new one?`)) return; const { error } = await sb.rpc('rotate_reader_link', { p_id: id }); if (error) return toast(error.message); return reader(); }
+    if (b.dataset.act === 'pause' || b.dataset.act === 'resume') {
+      const on = b.dataset.act === 'resume';
+      if (!on && !confirm(`Pause ${name}? Their link stops working and their unrecorded scripts go to the other readers.`)) return;
+      const { error } = await sb.rpc('set_reader_active', { p_id: id, p_active: on }); if (error) return toast(error.message); return reader();
+    }
+  });
   $('#f').onsubmit = async e => {
     e.preventDefault();
     const { error } = await sb.rpc('assign_reader', { p_name: $('#n').value, p_email: $('#e').value, p_phone: $('#p').value, p_channel: $('#ch').value });
     if (error) return toast(error.message);
-    toast('Reader assigned'); reader();
+    toast('Reader added — their booth link goes out within a minute'); reader();
   };
 }
 
