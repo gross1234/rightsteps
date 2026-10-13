@@ -75,8 +75,12 @@ function go(url) {
   document.getElementById("go").href = url;
   var dest = url === OVERRIDE ? "override" : url === APP_STORE ? "app_store" : "testflight";
   if (platform === "android") {
-    track("android_notice");
-    document.getElementById("msg").textContent = "RightSteps is on iPhone for now. Open this link on an iPhone to download.";
+    // Android is a closed beta on Google Play: only Gmail addresses on the tester list can join.
+    track("android_beta");
+    var a = document.getElementById("go");
+    a.href = "https://play.google.com/apps/testing/com.gabeross.rightsteps";
+    a.textContent = "Join the Android beta";
+    document.getElementById("msg").textContent = "Android is in beta: tap the button, then 'Become a tester' and install from Google Play. If it says the app isn't available, send your Gmail address to the person who shared this link so they can add you.";
     return;
   }
   // Give the click log a moment, but never hold the visitor up for more than 400ms.
