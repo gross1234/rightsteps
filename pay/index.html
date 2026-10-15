@@ -80,6 +80,9 @@
   }
   input:focus { outline: 2px solid var(--gold); border-color: transparent; }
   [hidden] { display: none !important; }
+  .codelink { display: block; margin: 14px auto 0; background: none; border: 0; color: var(--muted); font: inherit;
+    font-size: 14px; font-weight: 700; text-decoration: underline; cursor: pointer; }
+  #promo { text-transform: uppercase; letter-spacing: 2px; font-weight: 800; text-align: center; }
   .methods{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 4px}
   .method{appearance:none;border:2px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:inherit;
     font:inherit;font-weight:800;font-size:17px;border-radius:14px;min-height:52px;cursor:pointer}
@@ -118,6 +121,19 @@
       <div id="checkout"></div>
       <p class="fine" id="fine"></p>
     </div>
+    <button class="codelink" data-code>Have a promo code?</button>
+  </section>
+
+  <!-- Promo code -->
+  <section id="redeem" class="card" hidden>
+    <div class="row"><div class="emoji">🎟️</div><h1>Redeem a code</h1></div>
+    <p class="sub">Type the code you were given. It's free, no card needed, and each code works once.</p>
+    <form id="redeemForm">
+      <label for="promo">Promo code</label>
+      <input id="promo" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="RS-XXXX-XXXX" maxlength="20" required>
+      <button class="btn" type="submit" id="redeemGo">Redeem</button>
+    </form>
+    <div class="msg" id="redeemErr"></div>
   </section>
 
   <!-- Done -->
@@ -141,6 +157,7 @@
       <button class="btn" type="submit" id="restoreGo">Restore</button>
     </form>
     <div class="msg" id="restoreErr"></div>
+    <button class="codelink" data-code>Have a promo code?</button>
   </section>
 
   <!-- Opened without the app / back from portal -->
@@ -275,7 +292,36 @@ function restore() {
   };
 }
 
-if (q.get('done')) done();
+function redeem() {
+  if (!install) { show('open'); return; }
+  for (const id of ['buy', 'restore', 'open']) $(id).hidden = true;
+  show('redeem');
+  const pre = q.get('code');
+  if (pre && pre !== '1') $('promo').value = pre;
+  $('promo').focus();
+  $('redeemForm').onsubmit = async (ev) => {
+    ev.preventDefault();
+    $('redeemGo').disabled = true; $('redeemErr').className = 'msg';
+    try {
+      const r = await call('pay', { action: 'redeem', install, code: $('promo').value });
+      const until = r.until && new Date(r.until).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      $('redeem').hidden = true;
+      if (r.reward === 'pro') {
+        $('doneEmoji').textContent = '🎁'; $('doneTitle').textContent = 'Pro unlocked';
+        $('doneSub').textContent = 'Head back to RightSteps. No ads, unlimited lives and your Pro coins are waiting.';
+      } else {
+        $('doneEmoji').textContent = '👑'; $('doneTitle').textContent = 'Welcome to Premium';
+        $('doneSub').textContent = `Head back to RightSteps. Premium is on until ${until}. It's free and doesn't renew, so you'll never be charged.`;
+      }
+      document.querySelector('#done .fine').hidden = true;
+      show('done');
+    } catch (e) { fail($('redeemErr'), e); $('redeemGo').disabled = false; }
+  };
+}
+document.querySelectorAll('[data-code]').forEach((b) => b.onclick = redeem);
+
+if (q.get('code')) redeem();
+else if (q.get('done')) done();
 else if (q.get('restore')) restore();
 else if (q.get('back')) { $('openTitle').textContent = 'All done'; $('openSub').textContent = 'Changes are saved. Head back to the game.'; show('open'); }
 else buy().catch((e) => { show('buy'); fail($('err'), e); $('go').hidden = true; });

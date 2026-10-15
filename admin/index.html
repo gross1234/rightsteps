@@ -185,13 +185,13 @@ function screenNewPassword(){
 }
 
 // ---------------- app ----------------
-const TABS = [['overview','Overview'],['revenue','Revenue'],['ads','Ads'],['reader','Readers'],['settings','Settings']];
+const TABS = [['overview','Overview'],['revenue','Revenue'],['ads','Ads'],['reader','Readers'],['promo','Promo codes'],['settings','Settings']];
 let tab = (location.hash.match(/tab=(\w+)/) || [])[1] || 'overview';
 let days = 30;
 function app(){
   view.replaceChildren(h(`<div class="tabs" id="tabs">${TABS.map(([k,l]) => `<button data-k="${k}" class="${k===tab?'on':''}">${l}</button>`).join('')}</div><div id="pane"></div>`));
   $('#tabs').onclick = e => { const k = e.target.dataset?.k; if (!k) return; tab = k; history.replaceState(null,'','#tab='+k); app(); };
-  ({ overview, revenue, ads, reader, settings })[tab]();
+  ({ overview, revenue, ads, reader, promo, settings })[tab]();
 }
 const pane = () => $('#pane');
 async function rpcOrShow(fn, args){
@@ -469,6 +469,90 @@ async function reader(){
 }
 
 // ---- settings ----
+// ---------------- promo codes ----------------
+const REWARDS = { premium_1m: '1 month of Premium', premium_3m: '3 months of Premium', premium_1y: '1 year of Premium', pro: 'Pro' };
+const shareText = (code, reward) => `Here's ${reward === 'pro' ? 'RightSteps Pro' : 'a free ' + REWARDS[reward].replace(' of Premium', '') + ' of RightSteps Premium'} on me 🎁
+
+Your code: ${code}
+
+In RightSteps: Shop → Get coins → Restore purchases (at the bottom) → "Have a promo code?" and type it in. It's free, no card needed, and it works once.`;
+function newCode(){
+  const A = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'; // no 0/O, 1/I/L
+  const b = crypto.getRandomValues(new Uint32Array(8));
+  const c = [...b].map(x => A[x % A.length]).join('');
+  return `RS-${c.slice(0, 4)}-${c.slice(4)}`;
+}
+async function promo(){
+  pane().replaceChildren(h(`
+    <div class="two">
+      <div class="card"><h3>New promo code</h3>
+        <p class="small dim">Each code works once. The player types it on the checkout page and gets the reward for $0, no card. Premium from a code never renews.</p>
+        <label>Gives</label>
+        <select id="pmReward">${Object.entries(REWARDS).map(([k, l]) => `<option value="${k}" ${k === 'premium_1m' ? 'selected' : ''}>${l}${k === 'pro' ? ' (no ads, unlimited lives, Aurora skin, coins)' : ''}</option>`).join('')}</select>
+        <label>Who it's for <span class="mute">(optional, only you see this)</span></label><input id="pmNote" maxlength="80" placeholder="e.g. Sarah from church">
+        <button class="btn pri" id="pmGo" style="margin-top:12px;width:100%">Generate code</button>
+        <div id="pmOut"></div>
+      </div>
+      <div class="card"><h3>How they use it</h3>
+        <ol class="small dim">
+          <li>Open RightSteps → <b>Shop</b> → <b>Get coins</b>.</li>
+          <li>Tap <b>Restore purchases</b> at the bottom.</li>
+          <li>On the page that opens, tap <b>Have a promo code?</b>, type it and tap <b>Redeem</b>.</li>
+          <li>Go back to the app. It unlocks within a few seconds.</li>
+        </ol>
+        <p class="small mute">Buying is US-only for now, so players outside the US can't reach the page yet. Someone who already has Premium (or Pro, for a Pro code) is told to pass the code on, and the code stays unused.</p>
+      </div>
+    </div>
+    <h2>Codes</h2><div class="card tblwrap" id="pmList"><span class="dim small">Loading…</span></div>`));
+  $('#pmGo').onclick = async () => {
+    $('#pmGo').disabled = true;
+    const reward = $('#pmReward').value, note = $('#pmNote').value.trim() || null;
+    let code, error;
+    for (let i = 0; i < 3; i++) { code = newCode(); ({ error } = await sb.from('promo_codes').insert({ code, reward, note })); if (!error || error.code !== '23505') break; }
+    $('#pmGo').disabled = false;
+    if (error) return toast(error.message);
+    const msg = shareText(code, reward);
+    $('#pmOut').replaceChildren(h(`
+      <div style="margin-top:14px;padding:14px;border:1px dashed var(--gold);border-radius:12px">
+        <div class="code" style="margin:4px 0 6px">${esc(code)}</div>
+        <div class="small dim" style="text-align:center">${esc(REWARDS[reward])}${note ? ' · ' + esc(note) : ''}</div>
+        <div style="display:flex;gap:8px;margin-top:10px"><button class="btn sm" id="pmCopy" style="flex:1">Copy code</button><button class="btn sm pri" id="pmCopyMsg" style="flex:1">Copy message</button>${navigator.share ? '<button class="btn sm" id="pmShare" style="flex:1">Share…</button>' : ''}</div>
+      </div>`));
+    $('#pmCopy').onclick = () => copy(code);
+    $('#pmCopyMsg').onclick = () => copy(msg);
+    $('#pmShare')?.addEventListener('click', () => navigator.share({ text: msg }).catch(() => {}));
+    $('#pmNote').value = '';
+    promoList();
+  };
+  promoList();
+}
+async function promoList(){
+  const { data, error } = await sb.rpc('promo_list', { p_limit: 200 });
+  const el = $('#pmList'); if (!el) return;
+  if (error) return el.replaceChildren(h(`<span class="err">${esc(error.message)}</span>`));
+  if (!data.length) return el.replaceChildren(h(`<span class="dim small">No codes yet.</span>`));
+  const d = t => t ? new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
+  const used = data.filter(r => r.used_at).length, open = data.filter(r => !r.used_at && !r.voided_at).length;
+  el.replaceChildren(h(`<p class="small dim" style="margin:0 0 8px">${open} unused · ${used} redeemed</p>
+    <table><thead><tr><th>Code</th><th>Gives</th><th>For</th><th>Made</th><th>Status</th><th></th></tr></thead><tbody>
+    ${data.map(r => `<tr>
+      <td class="mono" style="font-size:13px">${esc(r.code)}</td>
+      <td>${esc(REWARDS[r.reward] || r.reward)}</td>
+      <td class="dim">${esc(r.note || '')}</td>
+      <td class="dim">${d(r.created_at)}</td>
+      <td>${r.voided_at ? '<span class="pill p-skipped">Turned off</span>'
+          : r.used_at ? `<span class="pill p-final">Used ${d(r.used_at)}</span>${r.used_by_name ? ` <span class="dim small">by ${esc(r.used_by_name)}</span>` : ''}`
+          : '<span class="pill p-ready">Unused</span>'}</td>
+      <td>${!r.used_at && !r.voided_at ? `<button class="btn sm" data-copy="${esc(r.code)}" data-r="${esc(r.reward)}">Copy message</button> <button class="btn sm" data-void="${esc(r.code)}">Turn off</button>` : ''}</td>
+    </tr>`).join('')}</tbody></table>`));
+  el.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copy(shareText(b.dataset.copy, b.dataset.r)));
+  el.querySelectorAll('[data-void]').forEach(b => b.onclick = async () => {
+    if (!confirm(`Turn off ${b.dataset.void}? Nobody will be able to use it.`)) return;
+    const { error } = await sb.from('promo_codes').update({ voided_at: new Date().toISOString() }).eq('code', b.dataset.void).is('used_at', null);
+    toast(error ? error.message : 'Turned off'); promoList();
+  });
+}
+
 async function settings(){
   const { data: st } = await sb.from('settings').select('key,value').eq('key', 'studio').maybeSingle();
   const s = st?.value || {};
