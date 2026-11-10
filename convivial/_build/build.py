@@ -1018,8 +1018,6 @@ def main():
         print("outreach: %s  %s" % (a.outreach, dict(sorted(pri.items()))))
     print("offices: %d  solution pages: %d  market pages: %d  proposal pages: %d  property pages: %d" % (
         len(offices), len(sol), len(mk), len(offices), sum(len(v) for v in props.values())))
-    if "convivialconcierge.com" in BASE or "convivialconcierge.com" in CFG["contact_email"]:
-        print("WARNING: base_url / contact_email are still the placeholders in _build/config.json", file=sys.stderr)
 
 
 if __name__ == "__main__":
