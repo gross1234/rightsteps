@@ -1,8 +1,8 @@
 {
-  "_README": "Edit these before deploying. base_url must be the live domain the site is served from (used for canonical URLs, sitemap and schema). Anything marked TODO is a placeholder.",
+  "_README": "base_url is the live domain the site is served from (canonical URLs, sitemap, schema).",
   "brand": "Convivial Concierge",
   "legal_name": "Sort Inc.",
-  "base_url": "https://www.convivialconcierge.com",
+  "base_url": "https://convivialconcierge.com",
   "contact_email": "gabe@convivialconcierge.com",
   "booking_url": "",
   "phone": "",
@@ -11,8 +11,6 @@
   "tagline": "Hospitality-grade concierge for the buildings families hold for generations.",
   "areas_served": "United States",
   "_TODO": [
-    "Set base_url to the real domain",
-    "Set contact_email to an inbox someone reads",
     "Optional: booking_url (Calendly etc.) - used for every call-to-action when set",
     "Review the service copy in build.py SEGMENTS so it only promises what you actually deliver"
   ]

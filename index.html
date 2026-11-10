@@ -1,6 +1,71 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RightSteps</title><link rel="stylesheet" href="style.css"></head><body><main>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RightSteps: Daily Path Puzzle Game for iPhone</title>
+<meta name="description" content="RightSteps is a one-finger path puzzle for iPhone. Draw one route from corner to flag, add and multiply your score, and never cross your own path. Free, with a Daily board and world ranking.">
+<link rel="canonical" href="https://gross1234.github.io/rightsteps/">
+<meta property="og:type" content="website"><meta property="og:site_name" content="RightSteps">
+<meta property="og:title" content="RightSteps: one finger, one route, one shot at the biggest number">
+<meta property="og:description" content="A daily path puzzle for iPhone. Snake through the board, stack your multipliers, and never cross your own path.">
+<meta property="og:url" content="https://gross1234.github.io/rightsteps/">
+<meta property="og:image" content="https://gross1234.github.io/rightsteps/shared/icon.png">
+<meta name="twitter:card" content="summary">
+<meta name="apple-itunes-app" content="app-id=6819920939">
+<link rel="icon" href="shared/icon.png"><link rel="stylesheet" href="style.css">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[
+{"@type":["VideoGame","MobileApplication"],"@id":"https://gross1234.github.io/rightsteps/#app","name":"RightSteps","alternateName":"RightSteps: Sharpen Your Mind","description":"A one-finger path puzzle for iPhone. Draw a single route from the bottom-left corner to the flag in the top-right. Every square adds to your score, green squares add, orange squares multiply, red squares hurt, and you can never cross your own path.","url":"https://gross1234.github.io/rightsteps/","image":"https://gross1234.github.io/rightsteps/shared/icon.png","operatingSystem":"iOS","applicationCategory":"GameApplication","applicationSubCategory":"Puzzle","genre":["Puzzle","Brain game","Daily puzzle"],"gamePlatform":"iPhone","playMode":"SinglePlayer","installUrl":"https://apps.apple.com/app/id6819920939","author":{"@type":"Person","name":"Gabriel Ross"},"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}},
+{"@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"What is RightSteps?","acceptedAnswer":{"@type":"Answer","text":"RightSteps is a free path puzzle game for iPhone. You drag one finger from the bottom-left corner to the flag in the top-right, and every square you cross adds to your score. Green squares add, orange squares multiply and red squares hurt, so the order you take them in decides how big your number gets. You can never cross your own path."}},
+{"@type":"Question","name":"How do you play RightSteps?","acceptedAnswer":{"@type":"Answer","text":"Put your finger on the bottom-left square and drag a single route to the flag. Every square crossed is +1. Collect green squares before orange multipliers so the multipliers have more to multiply, avoid red squares, and plan a route that snakes through the board without ever touching your own trail."}},
+{"@type":"Question","name":"Is there a daily puzzle in RightSteps?","acceptedAnswer":{"@type":"Answer","text":"Yes. Everyone gets the same Daily board each day, with a live world ranking. After your score syncs through Game Center, the Daily card shows the world's best score and your percentile."}},
+{"@type":"Question","name":"Is RightSteps free?","acceptedAnswer":{"@type":"Answer","text":"Yes, RightSteps is free on iPhone. Optional purchases remove ads, add hints on every level, or give unlimited lives in Campaign."}},
+{"@type":"Question","name":"What game modes does RightSteps have?","acceptedAnswer":{"@type":"Answer","text":"Campaign worlds with star targets and lives, a Daily board shared by every player with a world ranking, and an endless Zen mode with no lives and no pressure."}},
+{"@type":"Question","name":"Is RightSteps on Android?","acceptedAnswer":{"@type":"Answer","text":"RightSteps is on iPhone now. Android is in a closed beta on Google Play."}}]}]}</script>
+<style>
+.cta{display:inline-block;background:linear-gradient(180deg,#FFD36B,#FF8A3D);color:#3A1A00;font-weight:900;font-size:18px;padding:14px 22px;border-radius:16px;text-decoration:none;box-shadow:0 5px 0 #B5520F;margin:6px 0 10px}
+.answer{border-left:3px solid var(--gold)}
+.answer .tag{margin-bottom:6px}
+.answer p:last-child{color:var(--text);margin:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.grid .card{margin:0}
+.grid h3{margin:0 0 4px;font-size:17px}
+.grid p{margin:0}
+.sq{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+details{border-bottom:1px solid rgba(255,255,255,.12);padding:10px 0}
+summary{cursor:pointer;font-weight:700;color:var(--text)}
+summary h3{display:inline;font-size:17px;margin:0}
+</style>
+</head><body><main>
 <h1>RIGHTSTEPS</h1><p>every right step counts</p>
-<nav><a href="./">Home</a><a href="support.html">Support</a><a href="privacy.html">Privacy</a></nav>
-<div class="card"><p><strong>One finger. One route. One shot to bank the biggest number.</strong></p><p>Drag from the bottom-left corner to the flag in the top-right. Every square you cross is +1. Green squares add, orange squares multiply, red squares hurt, and the order you take them changes everything. Snake through the whole board, but never cross your own path.</p><p>Campaign worlds, a Daily board shared by everyone with a live world ranking, and an endless Zen mode. Free on the App Store for iPhone.</p></div>
+<nav><a href="./">Home</a><a href="how-to-play/">How to play</a><a href="support.html">Support</a><a href="privacy.html">Privacy</a></nav>
+
+<p style="margin-top:28px"><strong style="color:#fff;font-size:22px">One finger. One route. One shot to bank the biggest number.</strong></p>
+<a class="cta" href="get/?s=site">Get RightSteps free on iPhone</a>
+
+<div class="card answer"><span class="tag">IN ONE SENTENCE</span>
+<p>RightSteps is a free daily path puzzle for iPhone: drag one route from the bottom-left corner to the flag, stack your additions before your multipliers, and never cross your own path.</p></div>
+
+<h2>How it works</h2>
+<div class="grid">
+<div class="card"><h3>Draw one route</h3><p>Start bottom-left, finish at the flag top-right. Every square you cross is +1.</p></div>
+<div class="card"><h3><span class="sq" style="background:#34D399"></span>Green adds</h3><p>Grab them early so there is more for the multipliers to multiply.</p></div>
+<div class="card"><h3><span class="sq" style="background:#FF8A3D"></span>Orange multiplies</h3><p>The order you take them in changes everything.</p></div>
+<div class="card"><h3><span class="sq" style="background:#EF4444"></span>Red hurts</h3><p>Route around them, or take the hit if the payoff is worth it.</p></div>
+</div>
+<p>The one rule that makes it hard: you can never cross your own path. <a href="how-to-play/">Full rules and strategy tips</a>.</p>
+
+<h2>Three ways to play</h2>
+<div class="grid">
+<div class="card"><h3>Daily</h3><p>One board for everyone, every day, with a live world ranking and your percentile.</p></div>
+<div class="card"><h3>Campaign</h3><p>Worlds of hand-built boards. Beat the star score to move on.</p></div>
+<div class="card"><h3>Zen</h3><p>Endless boards. No lives, no timer, no pressure.</p></div>
+</div>
+
+<h2>Questions</h2>
+<details><summary><h3>Is RightSteps free?</h3></summary><p>Yes. Optional purchases remove ads, add hints on every level, or give unlimited Campaign lives.</p></details>
+<details><summary><h3>Is there a daily puzzle?</h3></summary><p>Yes. Everyone plays the same Daily board, and once your score syncs through Game Center you see the world's best and your percentile.</p></details>
+<details><summary><h3>How do I lose a life?</h3></summary><p>Only in Campaign, and only when you bank at the flag below the first-star score. Lives come back one every 15 minutes. Daily and Zen never use lives.</p></details>
+<details><summary><h3>Is it on Android?</h3></summary><p>iPhone now. Android is in a closed beta on Google Play.</p></details>
+<details><summary><h3>Do I need an account?</h3></summary><p>No. Progress stays on your device. See the <a href="privacy.html">privacy policy</a>.</p></details>
+
+<p style="margin-top:28px"><a class="cta" href="get/?s=site">Play today's Daily board</a></p>
 <p><small>© 2026 Gabriel Ross. RightSteps is an independent game.</small></p>
 </main></body></html>

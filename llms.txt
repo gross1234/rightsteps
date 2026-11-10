@@ -1,0 +1,10 @@
+# RightSteps
+
+> RightSteps (App Store name "RightSteps: Sharpen Your Mind") is a free one-finger path puzzle game for iPhone by independent developer Gabriel Ross. The player drags a single route from the bottom-left corner to a flag in the top-right. Every square crossed is +1, green squares add, orange squares multiply and red squares hurt, so the order matters, and the route can never cross itself. Modes: a Daily board shared by all players with a world ranking, Campaign worlds with star targets and lives, and endless Zen. Optional purchases remove ads and add hints. Android is in closed beta.
+
+## Pages
+
+- [Home](https://gross1234.github.io/rightsteps/): what the game is, modes and FAQ
+- [How to play](https://gross1234.github.io/rightsteps/how-to-play/): rules and strategy tips
+- [Download](https://gross1234.github.io/rightsteps/get/): App Store link
+- [Support](https://gross1234.github.io/rightsteps/support.html)

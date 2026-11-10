@@ -32,4 +32,4 @@ User-agent: Google-Extended
 Allow: /
 Disallow: /for/
 
-Sitemap: https://www.convivialconcierge.com/sitemap.xml
+Sitemap: https://convivialconcierge.com/sitemap.xml
