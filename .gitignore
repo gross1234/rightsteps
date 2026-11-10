@@ -1,0 +1,3 @@
+# Convivial lead data: contains contact details, never commit
+convivial/_build/*family*office*.csv
+*outreach*.csv
